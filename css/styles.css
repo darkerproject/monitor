@@ -69,6 +69,7 @@
     grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr)); grid-auto-rows:1fr}
   .grid.solo{gap:0; padding:0}
   .tile{position:relative; background:#000; border-radius:14px; overflow:hidden; min-height:0; min-width:0}
+  .tile[hidden]{display:none !important}
   .grid.solo .tile{border-radius:0}
   .tile video{width:100%; height:100%; object-fit:cover; background:#000; display:block}
   .tile video.contain{object-fit:contain}
@@ -92,6 +93,7 @@
   body.layout-duo #meTile .tile-avatar{width:44px; height:44px}
   body.layout-duo #meTile .tile-name-big{font-size:13px}
   body.layout-duo #meTile .tile-tag{font-size:10px; padding:2px 7px; left:6px; bottom:6px}
+  body.layout-duo .tile video.portrait{object-fit:contain}
 
   /* ---- CUADRÍCULA (3+): tamaños iguales, yo al final ---- */
   body.layout-grid #meTile{order:99}

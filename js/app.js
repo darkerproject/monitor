@@ -7,7 +7,7 @@
   var audioCtx=null,role=null,hostId=null,myId=null;
   var dawOn=false,dawStream=null,silentTrack=null,dawMonitorEl=null,dawNodes=null;
   var dawGain=parseFloat(localStorage.getItem("dawGain")||"1")||1;
-  var voiceTrack=null,dawSlotTrack=null;
+  var voiceTrack=null,dawSlotTrack=null,screenSlotTrack=null,blankVideoTrack=null,meScreenTile=null,meScreenVideo=null;
   var meters=[],meterRAF=null;
   var peers={}; // id -> {dc, call, name, avatar, index, cam, screen, hasVideo, tile, video, audioEls:[]}
   var myName=localStorage.getItem("myName")||"";
@@ -30,7 +30,7 @@
   function ensureCtx(){if(!audioCtx)audioCtx=new (window.AudioContext||window.webkitAudioContext)();if(audioCtx.state==="suspended")audioCtx.resume();return audioCtx;}
 
   // ---------- perfil ----------
-  function camVisible(){return camOn||sharing;}
+  function camVisible(){return camOn;}
   function displayName(name,index){return name||("User "+(index||"?"));}
   function myDisplayName(){return displayName(myName,myIndex);}
   function myProfileMsg(){return {type:"profile",name:myName,avatar:myAvatar,index:myIndex,cam:camVisible(),screen:sharing};}
@@ -60,9 +60,12 @@
     silentTrack=dst.stream.getAudioTracks()[0];
     return silentTrack;
   }
-  function currentVideoTrack(){
-    if(sharing&&screenStream)return screenStream.getVideoTracks()[0];
-    return localStream?localStream.getVideoTracks()[0]:null;
+  function getBlankVideoTrack(){
+    if(blankVideoTrack&&blankVideoTrack.readyState==="live")return blankVideoTrack;
+    var c=document.createElement("canvas");c.width=2;c.height=2;
+    c.getContext("2d").fillRect(0,0,2,2);
+    blankVideoTrack=c.captureStream(1).getVideoTracks()[0];
+    return blankVideoTrack;
   }
   // saliente: [voz, slot DAW, video] — el receptor lee audio[0]=voz, audio[1]=DAW
   function buildOutStream(){
@@ -70,7 +73,10 @@
     if(voiceTrack)out.addTrack(voiceTrack);
     dawSlotTrack=(dawOn&&dawNodes)?dawNodes.dst.stream.getAudioTracks()[0]:getSilentTrack();
     out.addTrack(dawSlotTrack);
-    var v=currentVideoTrack();if(v)out.addTrack(v);
+    var cam=localStream?localStream.getVideoTracks()[0]:null;
+    if(cam)out.addTrack(cam);
+    screenSlotTrack=(sharing&&screenStream)?screenStream.getVideoTracks()[0]:getBlankVideoTrack();
+    out.addTrack(screenSlotTrack);
     return out;
   }
 
@@ -149,7 +155,7 @@
   // ---------- malla de participantes ----------
   function ensurePeer(id){
     if(peers[id])return peers[id];
-    var p={id:id,dc:null,call:null,name:"",avatar:"",index:null,cam:true,screen:false,hasVideo:false,audioEls:[]};
+    var p={id:id,dc:null,call:null,name:"",avatar:"",index:null,cam:true,screen:false,hasVideo:false,audioEls:[],screenTrack:null,screenTile:null,screenVideo:null};
     peers[id]=p;
     createTile(p);
     updatePeersUI();
@@ -177,9 +183,10 @@
       if(msg.index)p.index=msg.index;
       if(typeof msg.cam==="boolean")p.cam=msg.cam;
       if(typeof msg.screen==="boolean")p.screen=msg.screen;
+      if(p.screen)ensurePeerScreenTile(p);
       updateTile(p);updatePeersUI();
     } else if(msg.type==="cam"){
-      p.cam=!!msg.on;p.screen=!!msg.screen;updateTile(p);updatePeersUI();
+      p.cam=!!msg.on;p.screen=!!msg.screen;if(p.screen)ensurePeerScreenTile(p);updateTile(p);updatePeersUI();
     } else if(msg.type==="welcome"&&role==="guest"){
       if(!myIndex){myIndex=msg.index;broadcast(myProfileMsg());refreshMyUI();}
       (msg.peers||[]).forEach(function(pid){
@@ -202,11 +209,24 @@
     watchConn(call.peerConnection,call.peer);
   }
   function attachPeerStream(p,stream){
-    p.hasVideo=stream.getVideoTracks().length>0;
-    p.video.muted=true;p.video.srcObject=stream;
+    syncPeerVideos(p,stream);
     ensurePeerAudio(p,stream);
-    stream.onaddtrack=function(){ensurePeerAudio(p,stream);};
+    stream.onaddtrack=function(){ensurePeerAudio(p,stream);syncPeerVideos(p,stream);updatePeersUI();};
     updateTile(p);updatePeersUI();
+  }
+  function syncPeerVideos(p,stream){
+    var vt=stream.getVideoTracks();
+    if(vt[0]){p.hasVideo=true;p.video.muted=true;p.video.srcObject=new MediaStream([vt[0]]);}
+    if(vt[1]){p.screenTrack=vt[1];if(p.screen)ensurePeerScreenTile(p);}
+  }
+  function ensurePeerScreenTile(p){
+    if(p.screenTile||!p.screenTrack)return;
+    var t=document.createElement("div");t.className="tile screen-tile";t.hidden=true;
+    t.innerHTML='<video autoplay playsinline muted></video><div class="tile-tag"></div>';
+    $("grid").appendChild(t);
+    p.screenTile=t;p.screenVideo=t.querySelector("video");
+    p.screenVideo.srcObject=new MediaStream([p.screenTrack]);
+    t.querySelector(".tile-tag").textContent=displayName(p.name,p.index)+" — pantalla";
   }
   function ensurePeerAudio(p,stream){
     stream.getAudioTracks().forEach(function(t,idx){
@@ -231,6 +251,7 @@
     try{if(p.dc)p.dc.close();}catch(e){}
     p.audioEls.forEach(function(a){try{a.srcObject=null;a.remove();}catch(e){}});
     if(p.tile)p.tile.remove();
+    if(p.screenTile)p.screenTile.remove();
     updatePeersUI();
     toast(displayName(p.name,p.index)+" salió");
   }
@@ -256,14 +277,17 @@
     return arr;
   }
   function replaceAcross(oldTrack,newTrack){allSenders().forEach(function(s){if(s.track===oldTrack)try{s.replaceTrack(newTrack);}catch(e){}});}
-  function replaceVideoAcross(newTrack){allSenders().forEach(function(s){if(s.track&&s.track.kind==="video")try{s.replaceTrack(newTrack);}catch(e){}});}
 
   // ---------- tiles ----------
+  function watchAspect(v){
+    var upd=function(){v.classList.toggle("portrait",v.videoHeight>v.videoWidth);};
+    v.addEventListener("loadedmetadata",upd);v.addEventListener("resize",upd);
+  }
   function createTile(p){
     var t=document.createElement("div");t.className="tile";
     t.innerHTML='<video autoplay playsinline muted></video><div class="tile-off show"><img class="tile-avatar" alt=""><span class="tile-name-big"></span></div><div class="tile-tag"></div>';
     $("grid").appendChild(t);
-    p.tile=t;p.video=t.querySelector("video");
+    p.tile=t;p.video=t.querySelector("video");watchAspect(p.video);
     updateTile(p);
   }
   function updateTile(p){
@@ -275,7 +299,7 @@
     off.classList.toggle("show",!visible);
     if(p.avatar){img.src=p.avatar;img.style.display="block";big.style.display="none";}
     else{img.style.display="none";big.style.display="block";big.textContent=name;}
-    p.video.classList.toggle("contain",!!p.screen);
+    if(p.screenTile)p.screenTile.querySelector(".tile-tag").textContent=name+" — pantalla";
   }
   function updateMyTile(){
     var t=$("meTile");
@@ -285,28 +309,27 @@
     off.classList.toggle("show",!visible);
     if(myAvatar){img.src=myAvatar;img.style.display="block";big.style.display="none";}
     else{img.style.display="none";big.style.display="block";big.textContent=myDisplayName();}
-    var v=$("meVideo");
-    v.classList.toggle("mirror",!sharing);
-    v.classList.toggle("contain",sharing);
+    $("meVideo").classList.add("mirror");
   }
   function applyLayout(){
     var g=$("grid");
     var ids=Object.keys(peers);
-    var total=ids.length+1;
-    var sharerTile=null;
-    if(sharing)sharerTile=$("meTile");
-    else{for(var i=0;i<ids.length;i++){if(peers[ids[i]].screen&&peers[ids[i]].tile){sharerTile=peers[ids[i]].tile;break;}}}
+    var total=ids.length+1; // solo cámaras
+    var sharerScreen=null;
+    if(sharing&&meScreenTile)sharerScreen=meScreenTile;
+    else{for(var i=0;i<ids.length;i++){var pp=peers[ids[i]];if(pp.screen&&pp.screenTile){sharerScreen=pp.screenTile;break;}}}
+    var screenTiles=[meScreenTile].concat(ids.map(function(k){return peers[k].screenTile;})).filter(Boolean);
+    screenTiles.forEach(function(t){t.hidden=(t!==sharerScreen);});
     document.body.classList.remove("layout-solo","layout-duo","layout-grid","layout-share");
-    var all=[$("meTile")].concat(ids.map(function(k){return peers[k].tile;})).filter(Boolean);
-    all.forEach(function(t){t.classList.remove("big","strip","center-span");t.style.removeProperty("--i");});
-    g.classList.toggle("solo",total===1&&!sharerTile);
+    var cams=[$("meTile")].concat(ids.map(function(k){return peers[k].tile;})).filter(Boolean);
+    cams.concat(screenTiles).forEach(function(t){t.classList.remove("big","strip","center-span");t.style.removeProperty("--i");});
+    g.classList.toggle("solo",total===1&&!sharerScreen);
     g.style.gridTemplateColumns="";g.style.removeProperty("--cols");
-    if(sharerTile){
+    if(sharerScreen){
       document.body.classList.add("layout-share");
-      sharerTile.classList.add("big");
-      var strip=all.filter(function(t){return t!==sharerTile;});
-      strip.forEach(function(t,i){t.classList.add("strip");t.style.setProperty("--i",i);});
-      g.style.gridTemplateColumns="repeat("+Math.max(strip.length,1)+",1fr)"; // fila inferior en teléfono
+      sharerScreen.classList.add("big");
+      cams.forEach(function(t,i){t.classList.add("strip");t.style.setProperty("--i",i);});
+      g.style.gridTemplateColumns="repeat("+Math.max(cams.length,1)+",1fr)"; // fila inferior en teléfono
     } else if(total===1){
       document.body.classList.add("layout-solo");
     } else if(total===2){
@@ -316,7 +339,7 @@
       var cols=total<=4?2:3;
       g.style.gridTemplateColumns="repeat("+cols+",1fr)";
       g.style.setProperty("--cols",cols);
-      if(total%cols===1)$("meTile").classList.add("center-span"); // 3 personas: yo abajo centrado
+      if(total%cols===1)$("meTile").classList.add("center-span");
     }
   }
   function updatePeersUI(){
@@ -443,7 +466,7 @@
   function toggleDaw(){if(dawOn)stopDaw();else startDaw();}
 
   // ---------- mic / cam / pantalla ----------
-  function notifyCam(){broadcast({type:"cam",on:camVisible(),screen:sharing});}
+  function notifyCam(){broadcast({type:"cam",on:camOn,screen:sharing});}
   function toggleMic(){
     micOn=!micOn;if(voiceTrack)voiceTrack.enabled=micOn;
     $("inMicSw").classList.toggle("on",micOn);
@@ -454,12 +477,20 @@
     $("camCtrl").classList.toggle("off",!camOn);
     updateMyTile();notifyCam();
   }
+  function ensureMeScreenTile(){
+    if(meScreenTile)return;
+    meScreenTile=document.createElement("div");meScreenTile.className="tile screen-tile";
+    meScreenTile.innerHTML='<video autoplay playsinline muted></video><div class="tile-tag">Tu pantalla</div>';
+    $("grid").appendChild(meScreenTile);
+    meScreenVideo=meScreenTile.querySelector("video");
+  }
   function toggleScreen(){
     if(!sharing){
       navigator.mediaDevices.getDisplayMedia({video:true}).then(function(s){
         screenStream=s;var tr=s.getVideoTracks()[0];
-        replaceVideoAcross(tr);
-        $("meVideo").srcObject=s;
+        replaceAcross(screenSlotTrack,tr);screenSlotTrack=tr;
+        ensureMeScreenTile();
+        meScreenVideo.srcObject=s;
         sharing=true;
         $("screenCtrl").classList.add("active");$("screenLbl").textContent="Detener";
         tr.onended=stopScreen;
@@ -469,11 +500,12 @@
   }
   function stopScreen(){
     if(!sharing)return;
-    var cam=localStream.getVideoTracks()[0];
-    if(cam)replaceVideoAcross(cam);
-    $("meVideo").srcObject=localStream;
+    sharing=false;
+    var blank=getBlankVideoTrack();
+    replaceAcross(screenSlotTrack,blank);screenSlotTrack=blank;
+    if(meScreenVideo)meScreenVideo.srcObject=null;
     if(screenStream)screenStream.getTracks().forEach(function(t){t.stop();});
-    screenStream=null;sharing=false;
+    screenStream=null;
     $("screenCtrl").classList.remove("active");$("screenLbl").textContent="Pantalla";
     updatePeersUI();notifyCam();
   }
@@ -491,7 +523,9 @@
   function swapCamera(){
     return navigator.mediaDevices.getUserMedia({video:videoConstraints()}).then(function(s){
       var nt=s.getVideoTracks()[0];
-      if(!sharing){replaceVideoAcross(nt);$("meVideo").srcObject=s;}
+      var old=localStream.getVideoTracks()[0];
+      if(old)replaceAcross(old,nt);
+      $("meVideo").srcObject=s;
       localStream.getVideoTracks().forEach(function(t){t.stop();localStream.removeTrack(t);});
       localStream.addTrack(nt);nt.enabled=camOn;
     });
@@ -598,6 +632,8 @@
     if(navigator.mediaDevices&&navigator.mediaDevices.addEventListener){
       navigator.mediaDevices.addEventListener("devicechange",function(){populateDevices();});
     }
+
+    watchAspect($("meVideo"));
 
     var hash=location.hash.replace(/^#/,"");
     if(hash){joinGuest(hash);}
