@@ -89,7 +89,7 @@
       var hasSink=("setSinkId" in HTMLMediaElement.prototype),spk=$("spkSelect");
       if(hasSink){fill(spk,devs,"audiooutput",selSpk,null);spk.disabled=false;}
       else{spk.innerHTML='<option>No disponible en este navegador</option>';spk.disabled=true;}
-      var m=$("micSelect");if(m.selectedOptions[0]){$("srcName").textContent=m.selectedOptions[0].textContent;$("inMicName").textContent=m.selectedOptions[0].textContent;}
+      var m=$("micSelect");if(m.selectedOptions[0])$("srcName").textContent=m.selectedOptions[0].textContent;
       var d=$("dawSelect");$("inDawName").textContent=(selDaw&&d.selectedOptions[0])?d.selectedOptions[0].textContent:"Sin dispositivo";
     });
   }
@@ -348,6 +348,7 @@
     $("grid").classList.toggle("solo",n===0);
     setStatus(n>0?"live":"", n>0?("Conectado ("+(n+1)+")"):"Listo");
     $("peopleCount").textContent=n+1;
+    $("peopleCtrl").hidden=(n===0);
     // lista del panel Personas
     var list=$("peopleList");list.innerHTML="";
     var mkRow=function(name,avatar,me){
@@ -469,8 +470,8 @@
   function notifyCam(){broadcast({type:"cam",on:camOn,screen:sharing});}
   function toggleMic(){
     micOn=!micOn;if(voiceTrack)voiceTrack.enabled=micOn;
-    $("inMicSw").classList.toggle("on",micOn);
-    $("inputsCtrl").classList.toggle("off",!micOn);
+    $("micCtrl").classList.toggle("off",!micOn);
+    $("micLbl").textContent=micOn?"Mic":"Silenc.";
   }
   function toggleCam(){
     camOn=!camOn;localStream.getVideoTracks().forEach(function(t){t.enabled=camOn;});
@@ -492,7 +493,8 @@
         ensureMeScreenTile();
         meScreenVideo.srcObject=s;
         sharing=true;
-        $("screenCtrl").classList.add("active");$("screenLbl").textContent="Detener";
+        $("inScreenSw").classList.add("on");$("inScreenName").textContent="Compartiendo";
+        closeSheets();
         tr.onended=stopScreen;
         updatePeersUI();notifyCam();
       }).catch(function(){toast("No se compartió la pantalla");});
@@ -506,7 +508,7 @@
     if(meScreenVideo)meScreenVideo.srcObject=null;
     if(screenStream)screenStream.getTracks().forEach(function(t){t.stop();});
     screenStream=null;
-    $("screenCtrl").classList.remove("active");$("screenLbl").textContent="Pantalla";
+    $("inScreenSw").classList.remove("on");$("inScreenName").textContent="Inactivo";
     updatePeersUI();notifyCam();
   }
 
@@ -584,18 +586,18 @@
     $("copyBtn").addEventListener("click",function(){copyFn("shareLink","copyBtn");});
     $("copyBtn2").addEventListener("click",function(){copyFn("shareLink2","copyBtn2");});
 
-    $("inputsCtrl").addEventListener("click",function(){openSheet("inputsSheet");});
+    $("micCtrl").addEventListener("click",toggleMic);
+    $("devicesCtrl").addEventListener("click",function(){openSheet("inputsSheet");});
     $("camCtrl").addEventListener("click",toggleCam);
-    $("screenCtrl").addEventListener("click",toggleScreen);
     $("peopleCtrl").addEventListener("click",function(){openSheet("peopleSheet");});
     $("gearCtrl").addEventListener("click",function(){openSheet("sheet");});
     $("hangCtrl").addEventListener("click",hangUp);
     $("scrim").addEventListener("click",closeSheets);
 
-    $("inMicRow").addEventListener("click",toggleMic);
+    $("inScreenRow").addEventListener("click",toggleScreen);
     $("inDawRow").addEventListener("click",toggleDaw);
 
-    $("micSelect").addEventListener("change",function(){selMic=this.value;$("srcName").textContent=this.selectedOptions[0].textContent;$("inMicName").textContent=this.selectedOptions[0].textContent;reacquireMic().catch(function(){toast("No se pudo cambiar el micrófono");});});
+    $("micSelect").addEventListener("change",function(){selMic=this.value;$("srcName").textContent=this.selectedOptions[0].textContent;reacquireMic().catch(function(){toast("No se pudo cambiar el micrófono");});});
     $("dawSelect").addEventListener("change",function(){
       selDaw=this.value;
       var d=this.selectedOptions[0];$("inDawName").textContent=selDaw&&d?d.textContent:"Sin dispositivo";

@@ -108,7 +108,7 @@
   body.layout-share .tile.big video{object-fit:contain}
   body.layout-share .tile.strip{
     position:absolute; z-index:6; width:158px; aspect-ratio:4/3;
-    right:14px; top:calc(14px + var(--i,0)*132px);
+    right:14px; top:calc(74px + var(--i,0)*132px);
     border-radius:12px; border:1px solid var(--pip-border); box-shadow:var(--shadow);
   }
   body.layout-share .tile.strip .tile-avatar{width:40px; height:40px}
@@ -166,6 +166,22 @@
     box-shadow:inset 0 1px 0 var(--glass-edge), var(--shadow);
   }
   body.has-remote .statuspill, body.role-guest .statuspill{display:flex}
+  .people-fab{
+    position:absolute; top:16px; right:16px; z-index:12;
+    width:46px; height:46px; border-radius:50%;
+    display:grid; place-items:center;
+    background:var(--glass); backdrop-filter:blur(32px) saturate(1.85); -webkit-backdrop-filter:blur(32px) saturate(1.85);
+    border:0.5px solid var(--line);
+    box-shadow:inset 0 1px 0 var(--glass-edge), var(--shadow);
+  }
+  .people-fab[hidden]{display:none}
+  .people-fab svg{width:21px; height:21px; stroke:var(--text); fill:none; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round}
+  .people-fab .count{
+    position:absolute; top:-4px; right:-4px; min-width:18px; height:18px; padding:0 5px;
+    border-radius:9px; background:var(--blue); color:#fff; font-size:10.5px; font-weight:600;
+    display:grid; place-items:center;
+  }
+
   .dot{width:7px; height:7px; border-radius:50%; background:var(--text-2)}
   .dot.live{background:#34c759} .dot.wait{background:#ff9f0a; animation:pulse 1.1s infinite}
   @keyframes pulse{50%{opacity:.3}}
@@ -236,8 +252,6 @@
   }
   .toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
 
-  .lbl .count{display:inline-block; min-width:15px; padding:0 4px; border-radius:8px; background:var(--fill); font-size:9.5px; text-align:center}
-
   .linkrow{display:flex; gap:8px}
   .linkrow input{flex:1; min-width:0; background:var(--surface-2); border:1px solid var(--line); color:var(--text); border-radius:10px; padding:11px 13px; font-size:13px}
   .linkrow .copy{background:var(--blue); color:#fff; font-weight:600; font-size:13px; padding:0 18px; border-radius:10px; white-space:nowrap; transition:filter .15s}
@@ -268,13 +282,8 @@
     .monitor-card{display:none}
     .grid{grid-template-columns:repeat(auto-fit,minmax(45%,1fr))}
 
-    /* dúo en teléfono: mitades iguales, el otro arriba y yo abajo */
-    body.layout-duo .grid{display:grid; grid-template-columns:1fr; grid-template-rows:1fr 1fr; gap:8px; padding:8px}
-    body.layout-duo .tile{position:static; inset:auto; border-radius:12px}
-    body.layout-duo #meTile{position:static; width:auto; aspect-ratio:auto; right:auto; bottom:auto; order:99; z-index:auto}
-    body.layout-duo #meTile .tile-avatar{width:84px; height:84px}
-    body.layout-duo #meTile .tile-name-big{font-size:22px}
-    body.layout-duo #meTile .tile-tag{font-size:12px; padding:4px 10px; left:10px; bottom:10px}
+    /* dúo en teléfono: igual que PC, yo en PiP encima de la barra */
+    body.layout-duo #meTile{width:112px; right:12px; bottom:calc(112px + env(safe-area-inset-bottom))}
 
     /* compartir en teléfono: pantalla extendida arriba, cámaras en fila abajo (más delgadas con más gente) */
     body.layout-share .grid{display:grid; gap:8px; padding:8px; grid-template-rows:auto 1fr; align-items:stretch}
