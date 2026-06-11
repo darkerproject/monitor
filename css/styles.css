@@ -46,13 +46,13 @@
     position:fixed; inset:0; padding-top:56px;
     display:flex; align-items:center; justify-content:center;
   }
-  .home-inner{text-align:center; max-width:520px; padding:30px}
-  .home-brand{display:flex; align-items:center; justify-content:center; gap:11px; margin-bottom:28px}
+  .home-inner{text-align:center; max-width:840px; padding:30px}
+  .home-brand{display:flex; align-items:center; justify-content:center; gap:11px; margin-bottom:36px}
   .home-brand img{height:28px; opacity:.95}
   [data-theme="dark"] .home-brand img{filter:invert(1)}
   .home-brand span{font-size:23px; font-weight:700; letter-spacing:-.01em}
-  #home h1{font-size:34px; font-weight:700; letter-spacing:-.03em; margin:0 0 12px; line-height:1.08}
-  #home .lede{font-size:15.5px; color:var(--text-2); line-height:1.55; margin:0 0 28px}
+  #home h1{font-size:58px; font-weight:700; letter-spacing:-.035em; margin:0 0 20px; line-height:1.05}
+  #home .lede{font-size:17px; color:var(--text-2); line-height:1.6; margin:0 auto 32px; max-width:640px}
   .btn-primary{
     background:var(--blue); color:#fff; font-size:17px; font-weight:600;
     padding:15px 40px; border-radius:13px; transition:transform .08s, filter .15s;
@@ -280,6 +280,10 @@
     .monitor-card{display:none}
     #devicesCtrl{display:none}
     #dawField{display:none}
+    #home h1{font-size:34px; margin-bottom:14px}
+    #home .lede{font-size:15.5px}
+    .home-brand{margin-bottom:26px}
+    .home-inner{padding:24px}
     .grid{grid-template-columns:repeat(auto-fit,minmax(45%,1fr))}
 
     /* dúo en teléfono: igual que PC, yo en PiP encima de la barra */
