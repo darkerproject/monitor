@@ -120,14 +120,14 @@
   }
   body.has-remote .monitor-card{bottom:96px}
   .mrow + .mrow{margin-top:11px; padding-top:11px; border-top:1px solid var(--line)}
-  .mrow .mlabel{font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--text-2); margin-bottom:7px}
+  .mrow .mlabel{font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--text); margin-bottom:7px}
   .mrow.daw .mlabel{color:var(--blue)}
   .meter{display:flex; gap:2px; align-items:flex-end; height:26px; width:148px}
   .seg{flex:1; height:100%; background:var(--fill); border-radius:1.5px; transition:background .05s}
-  .mrow .src{font-size:11px; color:var(--text-2); margin-top:7px; max-width:148px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .mrow .src{font-size:11px; color:var(--text); margin-top:7px; max-width:148px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
   .mlabel-row{display:flex; justify-content:space-between; align-items:baseline; width:148px}
   .mlabel-row .mlabel{margin-bottom:7px}
-  .gainval{font-size:10px; color:var(--text-2); font-variant-numeric:tabular-nums}
+  .gainval{font-size:10px; color:var(--text); font-variant-numeric:tabular-nums}
   .gainslider{display:block; width:148px; margin:10px 0 0; -webkit-appearance:none; appearance:none; height:4px; border-radius:2px; background:var(--line); outline:none}
   .gainslider::-webkit-slider-thumb{-webkit-appearance:none; width:14px; height:14px; border-radius:50%; background:var(--blue); box-shadow:0 1px 3px rgba(0,0,0,.35); cursor:pointer}
   .gainslider::-moz-range-thumb{width:14px; height:14px; border:none; border-radius:50%; background:var(--blue); cursor:pointer}
@@ -188,6 +188,11 @@
     width:100%; background:var(--surface-2); color:var(--text); border:1px solid var(--line);
     border-radius:11px; padding:13px; font-size:15px; appearance:none;
   }
+  .sheet-gain{margin-top:12px}
+  .sheet-gain .sg-row{display:flex; justify-content:space-between; align-items:baseline; font-size:13px; font-weight:600; margin-bottom:8px}
+  .sheet-gain .sg-row .gainval{font-size:13px; font-weight:400}
+  .gainslider.sheet{width:100%; margin:0}
+
   .switchrow{display:flex; gap:13px; align-items:flex-start; padding:15px 0 4px; border-top:1px solid var(--line); margin-top:4px}
   .switch{position:relative; flex:0 0 auto; width:50px; height:30px; background:var(--line); border-radius:30px; transition:background .2s; margin-top:1px; cursor:pointer}
   .switch.on{background:var(--blue)}
@@ -205,6 +210,7 @@
   .toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
 
   @media (max-width:480px){
+    .monitor-card{display:none}
     body.has-remote #localWrap{width:118px; right:12px}
     .controls{gap:8px; padding:10px 12px}
     .ctrl{width:50px} .ctrl .bubble{width:44px; height:44px}

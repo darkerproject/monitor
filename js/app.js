@@ -361,15 +361,18 @@
     });
     $("musicRow").addEventListener("click",function(){musicMode=!musicMode;$("musicSw").classList.toggle("on",musicMode);reacquireMic().then(function(){toast(musicMode?"Modo música activado":"Modo música desactivado");}).catch(function(){});});
 
-    // ganancia del DAW
-    var gs=$("dawGainSlider");
-    gs.value=Math.round(dawGain*100);
-    $("dawGainVal").textContent=gs.value+"%";
-    gs.addEventListener("input",function(){
-      dawGain=this.value/100;
+    // ganancia del DAW (slider del card y de ajustes, sincronizados)
+    function setDawGain(pct){
+      pct=Math.max(0,Math.min(400,Math.round(pct)));
+      dawGain=pct/100;
       if(dawNodes)dawNodes.gain.gain.value=dawGain;
-      $("dawGainVal").textContent=this.value+"%";
+      ["dawGainSlider","dawGainSlider2"].forEach(function(id){var el=$(id);if(el&&+el.value!==pct)el.value=pct;});
+      ["dawGainVal","dawGainVal2"].forEach(function(id){var el=$(id);if(el)el.textContent=pct+"%";});
       localStorage.setItem("dawGain",String(dawGain));
+    }
+    setDawGain(dawGain*100);
+    ["dawGainSlider","dawGainSlider2"].forEach(function(id){
+      var el=$(id);if(el)el.addEventListener("input",function(){setDawGain(this.value);});
     });
 
     // refresh device lists live when something is plugged in / activated
