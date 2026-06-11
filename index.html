@@ -32,8 +32,13 @@
 <!-- ROOM -->
 <div id="room">
   <div class="stage">
-    <video id="remoteVideo" autoplay playsinline muted></video>
-    <div id="localWrap"><video id="localVideo" class="mirror" autoplay playsinline muted></video><div class="cam-off" id="camOff"><img src="assets/dp-logo.png" alt=""></div></div>
+    <div class="grid solo" id="grid">
+      <div class="tile" id="meTile">
+        <video id="meVideo" class="mirror" autoplay playsinline muted></video>
+        <div class="tile-off"><img class="tile-avatar" alt=""><span class="tile-name-big"></span></div>
+        <div class="tile-tag">Tú</div>
+      </div>
+    </div>
 
     <div class="statuspill"><span class="dot wait" id="statusDot"></span><span id="statusText">Conectando…</span></div>
 
@@ -61,10 +66,10 @@
     </div>
 
     <div class="controls">
-      <button class="ctrl" id="micCtrl"><span class="bubble"><svg viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg></span><span class="lbl" id="micLbl">Mic</span></button>
+      <button class="ctrl" id="inputsCtrl"><span class="bubble"><svg viewBox="0 0 24 24"><line x1="5" y1="4" x2="5" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/><line x1="19" y1="4" x2="19" y2="20"/><circle cx="5" cy="14" r="2.2" fill="var(--surface)"/><circle cx="12" cy="8" r="2.2" fill="var(--surface)"/><circle cx="19" cy="16" r="2.2" fill="var(--surface)"/></svg></span><span class="lbl">Entradas</span></button>
       <button class="ctrl" id="camCtrl"><span class="bubble"><svg viewBox="0 0 24 24"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg></span><span class="lbl">Cámara</span></button>
-      <button class="ctrl" id="dawCtrl"><span class="bubble"><svg viewBox="0 0 24 24"><line x1="5" y1="4" x2="5" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/><line x1="19" y1="4" x2="19" y2="20"/><circle cx="5" cy="14" r="2.2" fill="var(--surface)"/><circle cx="12" cy="8" r="2.2" fill="var(--surface)"/><circle cx="19" cy="16" r="2.2" fill="var(--surface)"/></svg></span><span class="lbl" id="dawLbl">DAW</span></button>
       <button class="ctrl" id="screenCtrl"><span class="bubble"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></span><span class="lbl" id="screenLbl">Pantalla</span></button>
+      <button class="ctrl" id="peopleCtrl"><span class="bubble"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span><span class="lbl">Personas <span id="peopleCount" class="count">1</span></span></button>
       <button class="ctrl" id="gearCtrl"><span class="bubble"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span><span class="lbl">Ajustes</span></button>
       <button class="ctrl hang" id="hangCtrl"><span class="bubble"><svg viewBox="0 0 24 24"><path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.53.51 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.42 19.42 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.91 2H7a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .51 2.53 2 2 0 0 1-.45 2.11L7.3 9.63"/><line x1="23" y1="1" x2="1" y2="23"/></svg></span><span class="lbl">Salir</span></button>
     </div>
@@ -92,6 +97,43 @@
     <div class="switch" id="musicSw"><div class="knob"></div></div>
     <div class="t"><b>Modo música en el micrófono</b><span>Quita los filtros de voz (eco, ruido, ganancia automática) del micrófono. Útil si tu mezcla entra por el canal del micrófono.</span></div>
   </div>
+</div>
+
+<!-- PERSONAS -->
+<div class="sheet" id="peopleSheet">
+  <div class="grabber"></div>
+  <h2>Personas</h2>
+  <div class="profile-row">
+    <button class="avatar-btn" id="myAvatar" aria-label="Cambiar logo"></button>
+    <input type="file" id="avatarFile" accept="image/*" hidden>
+    <input type="text" id="nameInput" class="name-input" maxlength="24" placeholder="Tu nombre">
+  </div>
+  <div class="field" style="margin-top:16px">
+    <label>Enlace de la sala</label>
+    <div class="linkrow">
+      <input id="shareLink2" readonly>
+      <button class="copy" id="copyBtn2">Copiar</button>
+    </div>
+  </div>
+  <div class="field">
+    <label>En la sala</label>
+    <div id="peopleList" class="people-list"></div>
+  </div>
+</div>
+
+<!-- ENTRADAS -->
+<div class="sheet" id="inputsSheet">
+  <div class="grabber"></div>
+  <h2>Entradas</h2>
+  <div class="input-row" id="inMicRow">
+    <div class="t"><b>Micrófono</b><span id="inMicName">—</span></div>
+    <div class="switch on" id="inMicSw"><div class="knob"></div></div>
+  </div>
+  <div class="input-row" id="inDawRow">
+    <div class="t"><b>DAW</b><span id="inDawName">Sin dispositivo</span></div>
+    <div class="switch" id="inDawSw"><div class="knob"></div></div>
+  </div>
+  <div class="fnote" style="margin-top:12px">Los dispositivos de cada entrada se eligen en Ajustes.</div>
 </div>
 
 <div class="toast" id="toast"></div>
