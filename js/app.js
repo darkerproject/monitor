@@ -565,7 +565,7 @@
   }
 
   // ---------- sheets ----------
-  var sheetIds=["sheet","peopleSheet","inputsSheet","faqSheet"];
+  var sheetIds=["sheet","peopleSheet","inputsSheet"];
   function openSheet(id){
     sheetIds.forEach(function(s){$(s).classList.toggle("show",s===id);});
     $("scrim").classList.add("show");
@@ -577,7 +577,8 @@
 
   // ---------- wiring ----------
   document.addEventListener("DOMContentLoaded",function(){
-    $("faqBtn").addEventListener("click",function(){openSheet("faqSheet");});
+    $("faqBtn").addEventListener("click",function(){closeSheets();$("faqPage").hidden=false;});
+    $("faqClose").addEventListener("click",function(){$("faqPage").hidden=true;});
     $("themeBtn").addEventListener("click",function(){applyTheme(document.documentElement.getAttribute("data-theme")!=="dark");});
     $("startBtn").addEventListener("click",startHost);
 
