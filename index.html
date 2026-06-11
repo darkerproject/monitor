@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Monitor — Darker Project</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js"></script>
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<div class="header">
+  <img class="logo" src="assets/dp-logo.png" alt="Darker Project">
+  <span class="brand">Monitor</span>
+  <span class="spacer"></span>
+  <button class="iconbtn" id="themeBtn" aria-label="Modo oscuro">
+    <svg id="themeIcon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+  </button>
+</div>
+
+<!-- HOME -->
+<div id="home">
+  <div class="home-inner">
+    <img class="home-mark" src="assets/dp-logo.png" alt="">
+    <h1>Escucha tus mezclas con tus clientes</h1>
+    <p class="lede">Una sala de audio para músicos y productores. Comparte el enlace, comparte pantalla y monitorea cómo entra el sonido — en alta calidad.</p>
+    <button class="btn-primary" id="startBtn">Iniciar sala</button>
+    <p class="home-note">Te pediremos permiso de micrófono y cámara.</p>
+  </div>
+</div>
+
+<!-- ROOM -->
+<div id="room">
+  <div class="stage">
+    <video id="remoteVideo" autoplay playsinline muted></video>
+    <div id="localWrap"><video id="localVideo" class="mirror" autoplay playsinline muted></video></div>
+
+    <div class="statuspill"><span class="dot wait" id="statusDot"></span><span id="statusText">Conectando…</span></div>
+
+    <div class="invite">
+      <div class="ttl">Estás solo en la sala</div>
+      <div class="sub">Comparte este enlace para que tu cliente entre. Mientras tanto puedes compartir pantalla, activar el DAW y probar el audio.</div>
+      <div class="row">
+        <input id="shareLink" readonly>
+        <button class="copy" id="copyBtn">Copiar</button>
+      </div>
+    </div>
+
+    <div class="monitor-card">
+      <div class="mrow">
+        <div class="mlabel">Micrófono</div>
+        <div class="meter" id="meterMic"></div>
+        <div class="src" id="srcName">Micrófono predeterminado</div>
+      </div>
+      <div class="mrow daw" id="dawRow" style="display:none">
+        <div class="mlabel">DAW</div>
+        <div class="meter" id="meterDaw"></div>
+        <div class="src" id="dawSrcName"></div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button class="ctrl" id="micCtrl"><span class="bubble"><svg viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg></span><span class="lbl" id="micLbl">Mic</span></button>
+      <button class="ctrl" id="camCtrl"><span class="bubble"><svg viewBox="0 0 24 24"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg></span><span class="lbl">Cámara</span></button>
+      <button class="ctrl" id="dawCtrl"><span class="bubble"><svg viewBox="0 0 24 24"><line x1="5" y1="4" x2="5" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/><line x1="19" y1="4" x2="19" y2="20"/><circle cx="5" cy="14" r="2.2" fill="var(--surface)"/><circle cx="12" cy="8" r="2.2" fill="var(--surface)"/><circle cx="19" cy="16" r="2.2" fill="var(--surface)"/></svg></span><span class="lbl" id="dawLbl">DAW</span></button>
+      <button class="ctrl" id="screenCtrl"><span class="bubble"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></span><span class="lbl" id="screenLbl">Pantalla</span></button>
+      <button class="ctrl" id="gearCtrl"><span class="bubble"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span><span class="lbl">Ajustes</span></button>
+      <button class="ctrl hang" id="hangCtrl"><span class="bubble"><svg viewBox="0 0 24 24"><path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.53.51 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.42 19.42 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.91 2H7a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .51 2.53 2 2 0 0 1-.45 2.11L7.3 9.63"/><line x1="23" y1="1" x2="1" y2="23"/></svg></span><span class="lbl">Salir</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- SETTINGS -->
+<div class="scrim" id="scrim"></div>
+<div class="sheet" id="sheet">
+  <div class="grabber"></div>
+  <h2>Ajustes de audio y video</h2>
+  <div class="field"><label>Micrófono (tu voz)</label><select id="micSelect"></select></div>
+  <div class="field">
+    <label>Entrada del DAW</label>
+    <select id="dawSelect"></select>
+    <div class="fnote">Elige el dispositivo donde sale tu DAW (ZoomAudioDevice, BlackHole o Loopback). Se transmite sin filtros, en estéreo, y tú también lo escuchas.</div>
+  </div>
+  <div class="field"><label>Cámara</label><select id="camSelect"></select></div>
+  <div class="field"><label>Altavoz</label><select id="spkSelect"></select></div>
+  <div class="switchrow" id="musicRow">
+    <div class="switch" id="musicSw"><div class="knob"></div></div>
+    <div class="t"><b>Modo música en el micrófono</b><span>Quita los filtros de voz (eco, ruido, ganancia automática) del micrófono. Útil si tu mezcla entra por el canal del micrófono.</span></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="js/app.js"></script>
+</body>
+</html>
