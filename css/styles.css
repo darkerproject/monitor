@@ -93,7 +93,9 @@
   body.layout-duo #meTile .tile-avatar{width:44px; height:44px}
   body.layout-duo #meTile .tile-name-big{font-size:13px}
   body.layout-duo #meTile .tile-tag{font-size:10px; padding:2px 7px; left:6px; bottom:6px}
-  body.layout-duo .tile video.portrait{object-fit:contain}
+  body.layout-duo .tile:not(#meTile) .tile-tag{top:16px; bottom:auto; left:16px; font-size:13px}
+  body.layout-duo .tile:not(#meTile) video.portrait{object-fit:contain}
+  body.layout-duo #meTile:has(video.portrait){aspect-ratio:3/4}
 
   /* ---- CUADRÍCULA (3+): tamaños iguales, yo al final ---- */
   body.layout-grid #meTile{order:99}
@@ -159,13 +161,6 @@
   .gainslider::-webkit-slider-thumb{-webkit-appearance:none; width:14px; height:14px; border-radius:50%; background:var(--blue); box-shadow:0 1px 3px rgba(0,0,0,.35); cursor:pointer}
   .gainslider::-moz-range-thumb{width:14px; height:14px; border:none; border-radius:50%; background:var(--blue); cursor:pointer}
 
-  .statuspill{
-    position:absolute; top:16px; left:16px; display:none; align-items:center; gap:7px;
-    background:var(--glass); backdrop-filter:blur(32px) saturate(1.85); -webkit-backdrop-filter:blur(32px) saturate(1.85);
-    border:0.5px solid var(--line); border-radius:20px; padding:7px 13px; font-size:12px;
-    box-shadow:inset 0 1px 0 var(--glass-edge), var(--shadow);
-  }
-  body.has-remote .statuspill, body.role-guest .statuspill{display:flex}
   .people-fab{
     position:absolute; top:16px; right:16px; z-index:12;
     width:46px; height:46px; border-radius:50%;
@@ -175,6 +170,10 @@
     box-shadow:inset 0 1px 0 var(--glass-edge), var(--shadow);
   }
   .people-fab[hidden]{display:none}
+  .people-fab .fab-txt{display:none; font-size:12.5px; font-weight:600; white-space:nowrap}
+  .people-fab.pill{width:auto; border-radius:23px; padding:0 13px 0 16px; display:flex; align-items:center; gap:9px}
+  .people-fab.pill .fab-txt{display:inline}
+  .people-fab.pill .count{display:none}
   .people-fab svg{width:21px; height:21px; stroke:var(--text); fill:none; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round}
   .people-fab .count{
     position:absolute; top:-4px; right:-4px; min-width:18px; height:18px; padding:0 5px;
@@ -182,9 +181,6 @@
     display:grid; place-items:center;
   }
 
-  .dot{width:7px; height:7px; border-radius:50%; background:var(--text-2)}
-  .dot.live{background:#34c759} .dot.wait{background:#ff9f0a; animation:pulse 1.1s infinite}
-  @keyframes pulse{50%{opacity:.3}}
 
   /* ---------- CONTROLS ---------- */
   .controls{
@@ -286,9 +282,9 @@
     body.layout-duo #meTile{width:112px; right:12px; bottom:calc(112px + env(safe-area-inset-bottom))}
 
     /* compartir en teléfono: pantalla extendida arriba, cámaras en fila abajo (más delgadas con más gente) */
-    body.layout-share .grid{display:grid; gap:8px; padding:8px; grid-template-rows:auto 1fr; align-items:stretch}
-    body.layout-share .tile.big{position:static; inset:auto; grid-row:1; grid-column:1/-1; aspect-ratio:16/9; width:100%; border-radius:12px; z-index:auto}
-    body.layout-share .tile.strip{position:static; width:auto; aspect-ratio:auto; right:auto; top:auto; border-radius:12px; min-height:0}
+    body.layout-share .grid{display:grid; gap:8px; padding:8px 8px calc(118px + env(safe-area-inset-bottom)); grid-template-rows:auto 1fr; align-items:stretch}
+    body.layout-share .tile.big{position:static; inset:auto; grid-row:1; grid-column:1/-1; aspect-ratio:16/9; width:100%; border-radius:18px; z-index:auto}
+    body.layout-share .tile.strip{position:static; width:auto; aspect-ratio:auto; right:auto; top:auto; border-radius:18px; min-height:0}
     body.has-remote #localWrap{width:118px; right:12px}
     .controls{gap:8px; padding:10px 12px}
     .ctrl{width:50px} .ctrl .bubble{width:44px; height:44px}

@@ -13,6 +13,7 @@
   var myName=localStorage.getItem("myName")||"";
   var myAvatar=localStorage.getItem("myAvatar")||"";
   var myIndex=null; // host=1, invitados reciben el suyo en welcome
+  var connecting=false;
   var nextIndex=2;  // solo lo usa el host
   var $=function(id){return document.getElementById(id);};
 
@@ -26,7 +27,6 @@
   applyTheme(window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches);
 
   function toast(m){var t=$("toast");t.textContent=m;t.classList.add("show");clearTimeout(t._t);t._t=setTimeout(function(){t.classList.remove("show");},2400);}
-  function setStatus(s,t){$("statusDot").className="dot "+(s||"");$("statusText").textContent=t;}
   function ensureCtx(){if(!audioCtx)audioCtx=new (window.AudioContext||window.webkitAudioContext)();if(audioCtx.state==="suspended")audioCtx.resume();return audioCtx;}
 
   // ---------- perfil ----------
@@ -346,9 +346,11 @@
     var n=Object.keys(peers).length;
     document.body.classList.toggle("has-remote",n>0);
     $("grid").classList.toggle("solo",n===0);
-    setStatus(n>0?"live":"", n>0?("Conectado ("+(n+1)+")"):"Listo");
     $("peopleCount").textContent=n+1;
-    $("peopleCtrl").hidden=(n===0);
+    if(n>0)connecting=false;
+    var fab=$("peopleCtrl");
+    fab.classList.toggle("pill",connecting&&n===0);
+    fab.hidden=(n===0&&!connecting);
     // lista del panel Personas
     var list=$("peopleList");list.innerHTML="";
     var mkRow=function(name,avatar,me){
@@ -404,7 +406,7 @@
     role="guest";hostId=hid;document.body.classList.add("role-guest");
     ensureCtx();
     getMedia().then(function(){
-      enterRoom();refreshMyUI();setStatus("wait","Conectando…");
+      connecting=true;enterRoom();refreshMyUI();
       peer=new Peer(undefined,{debug:1});
       peer.on("open",function(id){
         myId=id;
@@ -415,7 +417,7 @@
       });
       peer.on("connection",setupData);
       peer.on("call",function(c){c.answer(buildOutStream(),{sdpTransform:preferOpusHQ});setupCall(c);});
-      peer.on("error",function(e){toast("Error: "+e.type);if(e.type==="peer-unavailable")setStatus("","No se encontró la sala");});
+      peer.on("error",function(e){if(e.type==="peer-unavailable"){connecting=false;updatePeersUI();toast("No se encontró la sala. Pide un enlace nuevo.");}else toast("Error: "+e.type);});
     }).catch(permsError);
   }
   function permsError(err){
