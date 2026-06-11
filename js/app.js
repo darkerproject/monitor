@@ -4,7 +4,8 @@
   var sharing=false,micOn=true,camOn=true,musicMode=false;
   var selMic="",selCam="",selSpk="",selDaw="";
   var audioCtx=null,role=null;
-  var dawOn=false,dawStream=null,silentTrack=null,dawMonitorEl=null;
+  var dawOn=false,dawStream=null,silentTrack=null,dawMonitorEl=null,dawNodes=null;
+  var dawGain=parseFloat(localStorage.getItem("dawGain")||"1")||1;
   var voiceTrack=null,dawSlotTrack=null; // what's currently in each outgoing audio slot
   var remoteAudioEls={}; // track.id -> <audio>
   var meters=[],meterRAF=null;
@@ -236,21 +237,28 @@
     if(!selDaw){openSheet();toast("Elige la entrada del DAW");return;}
     navigator.mediaDevices.getUserMedia({audio:dawConstraints()}).then(function(s){
       dawStream=s;dawOn=true;
-      var newTrack=s.getAudioTracks()[0];
+      // etapa de ganancia: entrada DAW -> gain -> pista procesada (se envía y se monitorea)
+      var ctx=ensureCtx();
+      var src=ctx.createMediaStreamSource(s);
+      var g=ctx.createGain();g.gain.value=dawGain;
+      var dst=ctx.createMediaStreamDestination();
+      src.connect(g);g.connect(dst);
+      dawNodes={src:src,gain:g,dst:dst};
+      var newTrack=dst.stream.getAudioTracks()[0];
       var snd=senderOfTrack(dawSlotTrack);
       if(snd)snd.replaceTrack(newTrack);
       dawSlotTrack=newTrack;
-      // local monitoring: you hear the DAW through the browser
+      // monitoreo local: escuchas el DAW a través del navegador
       if(!dawMonitorEl){dawMonitorEl=document.createElement("audio");dawMonitorEl.autoplay=true;document.body.appendChild(dawMonitorEl);}
-      dawMonitorEl.srcObject=new MediaStream([newTrack]);
+      dawMonitorEl.srcObject=dst.stream;
       applySink(dawMonitorEl);
       dawMonitorEl.play().catch(function(){});
-      // meter + UI
+      // medidor + UI (el medidor lee la señal ya con ganancia)
       $("dawRow").style.display="block";
       var dsel=$("dawSelect");$("dawSrcName").textContent=dsel.selectedOptions[0]?dsel.selectedOptions[0].textContent:"";
-      registerMeter("meterDaw",s);
+      registerMeter("meterDaw",dst.stream);
       $("dawCtrl").classList.add("active");$("dawLbl").textContent="DAW ●";
-      newTrack.onended=stopDaw;
+      s.getAudioTracks()[0].onended=stopDaw;
       toast("Audio del DAW activado");
     }).catch(function(){toast("No se pudo capturar la entrada del DAW");});
   }
@@ -263,6 +271,7 @@
     dawSlotTrack=silent;
     if(dawStream)dawStream.getTracks().forEach(function(t){t.stop();});
     dawStream=null;
+    if(dawNodes){try{dawNodes.src.disconnect();dawNodes.gain.disconnect();dawNodes.dst.stream.getTracks().forEach(function(t){t.stop();});}catch(e){}dawNodes=null;}
     if(dawMonitorEl)dawMonitorEl.srcObject=null;
     $("dawRow").style.display="none";
     var dm=meters.filter(function(m){return m.id==="meterDaw";})[0];if(dm)dm.analyser=null;
@@ -272,14 +281,15 @@
   function toggleDaw(){if(dawOn)stopDaw();else startDaw();}
 
   // ---------- mic / cam / screen ----------
+  function updateCamOff(){$("camOff").classList.toggle("show",!camOn&&!sharing);}
   function toggleMic(){micOn=!micOn;if(voiceTrack)voiceTrack.enabled=micOn;$("micCtrl").classList.toggle("off",!micOn);$("micLbl").textContent=micOn?"Mic":"Silenc.";}
-  function toggleCam(){camOn=!camOn;localStream.getVideoTracks().forEach(function(t){t.enabled=camOn;});$("camCtrl").classList.toggle("off",!camOn);}
+  function toggleCam(){camOn=!camOn;localStream.getVideoTracks().forEach(function(t){t.enabled=camOn;});$("camCtrl").classList.toggle("off",!camOn);updateCamOff();}
   function toggleScreen(){
     if(!sharing){
       navigator.mediaDevices.getDisplayMedia({video:true}).then(function(s){
         screenStream=s;var tr=s.getVideoTracks()[0];var snd=senderOfKind("video");if(snd)snd.replaceTrack(tr);
         var lv=$("localVideo");lv.srcObject=s;lv.classList.remove("mirror");lv.classList.add("screen");
-        sharing=true;$("screenCtrl").classList.add("active");$("screenLbl").textContent="Detener";tr.onended=stopScreen;
+        sharing=true;updateCamOff();$("screenCtrl").classList.add("active");$("screenLbl").textContent="Detener";tr.onended=stopScreen;
       }).catch(function(){toast("No se compartió la pantalla");});
     } else stopScreen();
   }
@@ -287,7 +297,7 @@
     if(!sharing)return;var cam=localStream.getVideoTracks()[0];var snd=senderOfKind("video");if(snd&&cam)snd.replaceTrack(cam);
     var lv=$("localVideo");lv.srcObject=localStream;lv.classList.add("mirror");lv.classList.remove("screen");
     if(screenStream)screenStream.getTracks().forEach(function(t){t.stop();});screenStream=null;sharing=false;
-    $("screenCtrl").classList.remove("active");$("screenLbl").textContent="Pantalla";
+    $("screenCtrl").classList.remove("active");$("screenLbl").textContent="Pantalla";updateCamOff();
   }
 
   // ---------- swaps ----------
@@ -350,6 +360,17 @@
       if(dawMonitorEl)applySink(dawMonitorEl);
     });
     $("musicRow").addEventListener("click",function(){musicMode=!musicMode;$("musicSw").classList.toggle("on",musicMode);reacquireMic().then(function(){toast(musicMode?"Modo música activado":"Modo música desactivado");}).catch(function(){});});
+
+    // ganancia del DAW
+    var gs=$("dawGainSlider");
+    gs.value=Math.round(dawGain*100);
+    $("dawGainVal").textContent=gs.value+"%";
+    gs.addEventListener("input",function(){
+      dawGain=this.value/100;
+      if(dawNodes)dawNodes.gain.gain.value=dawGain;
+      $("dawGainVal").textContent=this.value+"%";
+      localStorage.setItem("dawGain",String(dawGain));
+    });
 
     // refresh device lists live when something is plugged in / activated
     if(navigator.mediaDevices&&navigator.mediaDevices.addEventListener){

@@ -33,7 +33,7 @@
 <div id="room">
   <div class="stage">
     <video id="remoteVideo" autoplay playsinline muted></video>
-    <div id="localWrap"><video id="localVideo" class="mirror" autoplay playsinline muted></video></div>
+    <div id="localWrap"><video id="localVideo" class="mirror" autoplay playsinline muted></video><div class="cam-off" id="camOff"><img src="assets/dp-logo.png" alt=""></div></div>
 
     <div class="statuspill"><span class="dot wait" id="statusDot"></span><span id="statusText">Conectando…</span></div>
 
@@ -55,6 +55,10 @@
       <div class="mrow daw" id="dawRow" style="display:none">
         <div class="mlabel">DAW</div>
         <div class="meter" id="meterDaw"></div>
+        <div class="gainrow">
+          <input type="range" id="dawGainSlider" min="0" max="400" value="100" step="5" aria-label="Ganancia del DAW">
+          <span class="gainval" id="dawGainVal">100%</span>
+        </div>
         <div class="src" id="dawSrcName"></div>
       </div>
     </div>
