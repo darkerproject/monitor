@@ -308,6 +308,8 @@
       --glass:rgba(28,28,30,.6); --glass-edge:rgba(255,255,255,.14); --pip-border:rgba(255,255,255,.18);
     }
     #themeBtn{display:none}
+    /* iOS hace auto-zoom si el campo tiene letra <16px; con 16px no salta en ningun navegador movil */
+    .invite input, .linkrow input, .name-input, .field select{font-size:16px}
     .monitor-card{display:none}
     #devicesCtrl{display:none}
     #dawField{display:none}
