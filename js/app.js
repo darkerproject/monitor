@@ -385,6 +385,29 @@
   }
 
   function enterRoom(){$("home").style.display="none";$("room").classList.add("show");}
+  // ---------- previews del pre-join ----------
+  var preMicStream=null,preCamStream=null;
+  function startMicPreview(){
+    navigator.mediaDevices.getUserMedia({audio:micConstraints()}).then(function(s){
+      preMicStream=s;ensureCtx();
+      $("preMeterWrap").classList.add("show");
+      registerMeter("meterPre",s);
+    }).catch(function(){preMicOn=false;$("preMicSw").classList.remove("on");toast("No se pudo acceder al micrófono");});
+  }
+  function stopMicPreview(){
+    if(preMicStream){preMicStream.getTracks().forEach(function(t){t.stop();});preMicStream=null;}
+    var m=meters.filter(function(x){return x.id==="meterPre";})[0];if(m)m.analyser=null;
+    $("preMeterWrap").classList.remove("show");
+  }
+  function startCamPreview(){
+    navigator.mediaDevices.getUserMedia({video:videoConstraints()}).then(function(s){
+      preCamStream=s;$("preCamVideo").srcObject=s;$("preCamWrap").classList.add("show");
+    }).catch(function(){preCamOn=false;$("preCamSw").classList.remove("on");toast("No se pudo acceder a la cámara");});
+  }
+  function stopCamPreview(){
+    if(preCamStream){preCamStream.getTracks().forEach(function(t){t.stop();});preCamStream=null;}
+    $("preCamVideo").srcObject=null;$("preCamWrap").classList.remove("show");
+  }
   function applyInitialAV(){
     if(voiceTrack)voiceTrack.enabled=micOn;
     if(localStream)localStream.getVideoTracks().forEach(function(t){t.enabled=camOn;});
@@ -594,11 +617,14 @@
       pendingJoin="host";
       $("prejoinGo").textContent="Iniciar sala";
       openSheet("prejoinSheet");
+      if(preMicOn)startMicPreview();
+      if(preCamOn)startCamPreview();
     });
-    $("preMicRow").addEventListener("click",function(){preMicOn=!preMicOn;$("preMicSw").classList.toggle("on",preMicOn);});
-    $("preCamRow").addEventListener("click",function(){preCamOn=!preCamOn;$("preCamSw").classList.toggle("on",preCamOn);});
+    $("preMicRow").addEventListener("click",function(){preMicOn=!preMicOn;$("preMicSw").classList.toggle("on",preMicOn);ensureCtx();if(preMicOn)startMicPreview();else stopMicPreview();});
+    $("preCamRow").addEventListener("click",function(){preCamOn=!preCamOn;$("preCamSw").classList.toggle("on",preCamOn);if(preCamOn)startCamPreview();else stopCamPreview();});
     $("prejoinGo").addEventListener("click",function(){
       micOn=preMicOn;camOn=preCamOn;
+      stopMicPreview();stopCamPreview();
       closeSheets();
       if(pendingJoin==="host")startHost();
       else if(pendingJoin)joinGuest(pendingJoin);
@@ -665,6 +691,6 @@
     watchAspect($("meVideo"));
 
     var hash=location.hash.replace(/^#/,"");
-    if(hash){pendingJoin=hash;$("prejoinGo").textContent="Entrar a la sala";openSheet("prejoinSheet");}
+    if(hash){pendingJoin=hash;$("prejoinGo").textContent="Entrar a la sala";openSheet("prejoinSheet");if(preMicOn)startMicPreview();if(preCamOn)startCamPreview();}
   });
 })();
