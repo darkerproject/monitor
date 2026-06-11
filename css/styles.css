@@ -46,11 +46,13 @@
     position:fixed; inset:0; padding-top:56px;
     display:flex; align-items:center; justify-content:center;
   }
-  .home-inner{text-align:center; max-width:440px; padding:30px}
-  .home-mark{height:54px; margin:0 auto 26px; opacity:.92}
-  [data-theme="dark"] .home-mark{filter:invert(1)}
+  .home-inner{text-align:center; max-width:520px; padding:30px}
+  .home-brand{display:flex; align-items:center; justify-content:center; gap:11px; margin-bottom:28px}
+  .home-brand img{height:28px; opacity:.95}
+  [data-theme="dark"] .home-brand img{filter:invert(1)}
+  .home-brand span{font-size:23px; font-weight:700; letter-spacing:-.01em}
   #home h1{font-size:34px; font-weight:700; letter-spacing:-.03em; margin:0 0 12px; line-height:1.08}
-  #home .lede{font-size:16px; color:var(--text-2); line-height:1.45; margin:0 0 26px}
+  #home .lede{font-size:15.5px; color:var(--text-2); line-height:1.55; margin:0 0 28px}
   .btn-primary{
     background:var(--blue); color:#fff; font-size:17px; font-weight:600;
     padding:15px 40px; border-radius:13px; transition:transform .08s, filter .15s;
@@ -276,6 +278,8 @@
 
   @media (max-width:480px){
     .monitor-card{display:none}
+    #devicesCtrl{display:none}
+    #dawField{display:none}
     .grid{grid-template-columns:repeat(auto-fit,minmax(45%,1fr))}
 
     /* dúo en teléfono: igual que PC, yo en PiP encima de la barra */
@@ -283,8 +287,8 @@
 
     /* compartir en teléfono: pantalla extendida arriba, cámaras en fila abajo (más delgadas con más gente) */
     body.layout-share .grid{display:grid; gap:8px; padding:8px 8px calc(118px + env(safe-area-inset-bottom)); grid-template-rows:auto 1fr; align-items:stretch}
-    body.layout-share .tile.big{position:static; inset:auto; grid-row:1; grid-column:1/-1; aspect-ratio:16/9; width:100%; border-radius:18px; z-index:auto}
-    body.layout-share .tile.strip{position:static; width:auto; aspect-ratio:auto; right:auto; top:auto; border-radius:18px; min-height:0}
+    body.layout-share .tile.big{position:relative; inset:auto; grid-row:1; grid-column:1/-1; aspect-ratio:16/9; width:100%; border-radius:22px; z-index:auto}
+    body.layout-share .tile.strip{position:relative; width:auto; aspect-ratio:auto; right:auto; top:auto; border-radius:22px; min-height:0}
     body.has-remote #localWrap{width:118px; right:12px}
     .controls{gap:8px; padding:10px 12px}
     .ctrl{width:50px} .ctrl .bubble{width:44px; height:44px}
