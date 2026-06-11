@@ -179,7 +179,7 @@
       if(typeof msg.screen==="boolean")p.screen=msg.screen;
       updateTile(p);updatePeersUI();
     } else if(msg.type==="cam"){
-      p.cam=!!msg.on;p.screen=!!msg.screen;updateTile(p);
+      p.cam=!!msg.on;p.screen=!!msg.screen;updateTile(p);updatePeersUI();
     } else if(msg.type==="welcome"&&role==="guest"){
       if(!myIndex){myIndex=msg.index;broadcast(myProfileMsg());refreshMyUI();}
       (msg.peers||[]).forEach(function(pid){
@@ -289,6 +289,36 @@
     v.classList.toggle("mirror",!sharing);
     v.classList.toggle("contain",sharing);
   }
+  function applyLayout(){
+    var g=$("grid");
+    var ids=Object.keys(peers);
+    var total=ids.length+1;
+    var sharerTile=null;
+    if(sharing)sharerTile=$("meTile");
+    else{for(var i=0;i<ids.length;i++){if(peers[ids[i]].screen&&peers[ids[i]].tile){sharerTile=peers[ids[i]].tile;break;}}}
+    document.body.classList.remove("layout-solo","layout-duo","layout-grid","layout-share");
+    var all=[$("meTile")].concat(ids.map(function(k){return peers[k].tile;})).filter(Boolean);
+    all.forEach(function(t){t.classList.remove("big","strip","center-span");t.style.removeProperty("--i");});
+    g.classList.toggle("solo",total===1&&!sharerTile);
+    g.style.gridTemplateColumns="";g.style.removeProperty("--cols");
+    if(sharerTile){
+      document.body.classList.add("layout-share");
+      sharerTile.classList.add("big");
+      var strip=all.filter(function(t){return t!==sharerTile;});
+      strip.forEach(function(t,i){t.classList.add("strip");t.style.setProperty("--i",i);});
+      g.style.gridTemplateColumns="repeat("+Math.max(strip.length,1)+",1fr)"; // fila inferior en teléfono
+    } else if(total===1){
+      document.body.classList.add("layout-solo");
+    } else if(total===2){
+      document.body.classList.add("layout-duo");
+    } else {
+      document.body.classList.add("layout-grid");
+      var cols=total<=4?2:3;
+      g.style.gridTemplateColumns="repeat("+cols+",1fr)";
+      g.style.setProperty("--cols",cols);
+      if(total%cols===1)$("meTile").classList.add("center-span"); // 3 personas: yo abajo centrado
+    }
+  }
   function updatePeersUI(){
     var n=Object.keys(peers).length;
     document.body.classList.toggle("has-remote",n>0);
@@ -308,6 +338,7 @@
     mkRow(myDisplayName(),myAvatar,true);
     Object.keys(peers).forEach(function(k){var p=peers[k];mkRow(displayName(p.name,p.index),p.avatar,false);});
     updateMyTile();
+    applyLayout();
   }
   function refreshMyUI(){
     $("nameInput").value=myName;
@@ -432,7 +463,7 @@
         sharing=true;
         $("screenCtrl").classList.add("active");$("screenLbl").textContent="Detener";
         tr.onended=stopScreen;
-        updateMyTile();notifyCam();
+        updatePeersUI();notifyCam();
       }).catch(function(){toast("No se compartió la pantalla");});
     } else stopScreen();
   }
@@ -444,7 +475,7 @@
     if(screenStream)screenStream.getTracks().forEach(function(t){t.stop();});
     screenStream=null;sharing=false;
     $("screenCtrl").classList.remove("active");$("screenLbl").textContent="Pantalla";
-    updateMyTile();notifyCam();
+    updatePeersUI();notifyCam();
   }
 
   // ---------- swaps ----------

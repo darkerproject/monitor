@@ -82,6 +82,37 @@
     padding:4px 10px; border-radius:8px; backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); max-width:70%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
   .grid.solo .tile-tag{display:none}
 
+  /* ---- DÚO (2 personas): PC = el otro a pantalla completa + yo en PiP ---- */
+  body.layout-duo .grid{display:block; gap:0; padding:0}
+  body.layout-duo .tile{position:absolute; inset:0; border-radius:0}
+  body.layout-duo #meTile{
+    inset:auto; right:16px; bottom:96px; width:188px; aspect-ratio:4/3;
+    border-radius:14px; border:1px solid var(--pip-border); box-shadow:var(--shadow); z-index:5;
+  }
+  body.layout-duo #meTile .tile-avatar{width:44px; height:44px}
+  body.layout-duo #meTile .tile-name-big{font-size:13px}
+  body.layout-duo #meTile .tile-tag{font-size:10px; padding:2px 7px; left:6px; bottom:6px}
+
+  /* ---- CUADRÍCULA (3+): tamaños iguales, yo al final ---- */
+  body.layout-grid #meTile{order:99}
+  body.layout-grid .tile.center-span{
+    grid-column:1/-1; justify-self:center;
+    width:calc((100% - (var(--cols,2) - 1)*10px)/var(--cols,2));
+  }
+
+  /* ---- COMPARTIR PANTALLA: PC = pantalla completa + strip de cámaras a la derecha ---- */
+  body.layout-share .grid{display:block; gap:0; padding:0}
+  body.layout-share .tile.big{position:absolute; inset:0; border-radius:0; z-index:1}
+  body.layout-share .tile.big video{object-fit:contain}
+  body.layout-share .tile.strip{
+    position:absolute; z-index:6; width:158px; aspect-ratio:4/3;
+    right:14px; top:calc(14px + var(--i,0)*132px);
+    border-radius:12px; border:1px solid var(--pip-border); box-shadow:var(--shadow);
+  }
+  body.layout-share .tile.strip .tile-avatar{width:40px; height:40px}
+  body.layout-share .tile.strip .tile-name-big{font-size:12px}
+  body.layout-share .tile.strip .tile-tag{font-size:10px; padding:2px 7px; left:6px; bottom:6px}
+
   .invite{
     position:absolute; top:16px; left:50%; transform:translateX(-50%);
     width:min(520px, calc(100% - 32px)); background:var(--glass);
@@ -234,6 +265,19 @@
   @media (max-width:480px){
     .monitor-card{display:none}
     .grid{grid-template-columns:repeat(auto-fit,minmax(45%,1fr))}
+
+    /* dúo en teléfono: mitades iguales, el otro arriba y yo abajo */
+    body.layout-duo .grid{display:grid; grid-template-columns:1fr; grid-template-rows:1fr 1fr; gap:8px; padding:8px}
+    body.layout-duo .tile{position:static; inset:auto; border-radius:12px}
+    body.layout-duo #meTile{position:static; width:auto; aspect-ratio:auto; right:auto; bottom:auto; order:99; z-index:auto}
+    body.layout-duo #meTile .tile-avatar{width:84px; height:84px}
+    body.layout-duo #meTile .tile-name-big{font-size:22px}
+    body.layout-duo #meTile .tile-tag{font-size:12px; padding:4px 10px; left:10px; bottom:10px}
+
+    /* compartir en teléfono: pantalla extendida arriba, cámaras en fila abajo (más delgadas con más gente) */
+    body.layout-share .grid{display:grid; gap:8px; padding:8px; grid-template-rows:auto 1fr; align-items:stretch}
+    body.layout-share .tile.big{position:static; inset:auto; grid-row:1; grid-column:1/-1; aspect-ratio:16/9; width:100%; border-radius:12px; z-index:auto}
+    body.layout-share .tile.strip{position:static; width:auto; aspect-ratio:auto; right:auto; top:auto; border-radius:12px; min-height:0}
     body.has-remote #localWrap{width:118px; right:12px}
     .controls{gap:8px; padding:10px 12px}
     .ctrl{width:50px} .ctrl .bubble{width:44px; height:44px}
