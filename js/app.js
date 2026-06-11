@@ -14,6 +14,7 @@
   var myAvatar=localStorage.getItem("myAvatar")||"";
   var myIndex=null; // host=1, invitados reciben el suyo en welcome
   var connecting=false;
+  var preMicOn=true,preCamOn=true,pendingJoin=null;
   var nextIndex=2;  // solo lo usa el host
   var $=function(id){return document.getElementById(id);};
 
@@ -384,6 +385,13 @@
   }
 
   function enterRoom(){$("home").style.display="none";$("room").classList.add("show");}
+  function applyInitialAV(){
+    if(voiceTrack)voiceTrack.enabled=micOn;
+    if(localStream)localStream.getVideoTracks().forEach(function(t){t.enabled=camOn;});
+    $("micCtrl").classList.toggle("off",!micOn);
+    $("micLbl").textContent=micOn?"Mic":"Silenc.";
+    $("camCtrl").classList.toggle("off",!camOn);
+  }
 
   // ---------- inicio ----------
   function startHost(){
@@ -391,6 +399,7 @@
     var b=$("startBtn");b.disabled=true;b.textContent="Pidiendo permisos…";
     ensureCtx();
     getMedia().then(function(){
+      applyInitialAV();
       enterRoom();refreshMyUI();
       peer=new Peer(undefined,{debug:1});
       peer.on("open",function(id){
@@ -407,7 +416,7 @@
     role="guest";hostId=hid;document.body.classList.add("role-guest");
     ensureCtx();
     getMedia().then(function(){
-      connecting=true;enterRoom();refreshMyUI();
+      applyInitialAV();connecting=true;enterRoom();refreshMyUI();
       peer=new Peer(undefined,{debug:1});
       peer.on("open",function(id){
         myId=id;
@@ -566,7 +575,7 @@
   }
 
   // ---------- sheets ----------
-  var sheetIds=["sheet","peopleSheet","inputsSheet"];
+  var sheetIds=["sheet","peopleSheet","inputsSheet","prejoinSheet"];
   function openSheet(id){
     sheetIds.forEach(function(s){$(s).classList.toggle("show",s===id);});
     $("scrim").classList.add("show");
@@ -581,7 +590,20 @@
     $("faqBtn").addEventListener("click",function(){closeSheets();$("faqPage").hidden=false;});
     $("faqClose").addEventListener("click",function(){$("faqPage").hidden=true;});
     $("themeBtn").addEventListener("click",function(){applyTheme(document.documentElement.getAttribute("data-theme")!=="dark");});
-    $("startBtn").addEventListener("click",startHost);
+    $("startBtn").addEventListener("click",function(){
+      pendingJoin="host";
+      $("prejoinGo").textContent="Iniciar sala";
+      openSheet("prejoinSheet");
+    });
+    $("preMicRow").addEventListener("click",function(){preMicOn=!preMicOn;$("preMicSw").classList.toggle("on",preMicOn);});
+    $("preCamRow").addEventListener("click",function(){preCamOn=!preCamOn;$("preCamSw").classList.toggle("on",preCamOn);});
+    $("prejoinGo").addEventListener("click",function(){
+      micOn=preMicOn;camOn=preCamOn;
+      closeSheets();
+      if(pendingJoin==="host")startHost();
+      else if(pendingJoin)joinGuest(pendingJoin);
+      pendingJoin=null;
+    });
 
     var copyFn=function(inputId,btnId){
       var i=$(inputId);i.select();i.setSelectionRange(0,99999);
@@ -597,7 +619,7 @@
     $("peopleCtrl").addEventListener("click",function(){openSheet("peopleSheet");});
     $("gearCtrl").addEventListener("click",function(){openSheet("sheet");});
     $("hangCtrl").addEventListener("click",hangUp);
-    $("scrim").addEventListener("click",closeSheets);
+    $("scrim").addEventListener("click",function(){if($("prejoinSheet").classList.contains("show"))return;closeSheets();});
 
     $("inScreenRow").addEventListener("click",toggleScreen);
     $("inDawRow").addEventListener("click",toggleDaw);
@@ -643,6 +665,6 @@
     watchAspect($("meVideo"));
 
     var hash=location.hash.replace(/^#/,"");
-    if(hash){joinGuest(hash);}
+    if(hash){pendingJoin=hash;$("prejoinGo").textContent="Entrar a la sala";openSheet("prejoinSheet");}
   });
 })();
