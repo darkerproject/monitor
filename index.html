@@ -13,6 +13,7 @@
   <img class="logo" src="assets/dp-logo.png" alt="Darker Project">
   <span class="brand">Monitor</span>
   <span class="spacer"></span>
+  <button class="qa-btn" id="faqBtn">Q&amp;A</button>
   <button class="iconbtn" id="themeBtn" aria-label="Modo oscuro">
     <svg id="themeIcon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
   </button>
@@ -23,7 +24,7 @@
   <div class="home-inner">
     <div class="home-brand"><img src="assets/dp-logo.png" alt="Darker Project"><span>Monitor</span></div>
     <h1>La sala de reuniones para músicos</h1>
-    <p class="lede">Una plataforma pensada para músicos y productores que quieren reunirse en línea: revisa producciones con tus clientes, dicta clases de música, organiza juntas de banda o comparte música en vivo con tus amigos. Audio en alta calidad, sin restricciones, al alcance de todos.</p>
+    <p class="lede">Reuniones virtuales con audio en alta calidad: revisa producciones con tus clientes, dicta clases, junta a tu banda o comparte música en vivo.</p>
     <button class="btn-primary" id="startBtn">Iniciar sala</button>
     <p class="home-note">Te pediremos permiso de micrófono y cámara.</p>
   </div>
@@ -137,6 +138,51 @@
     <div class="switch" id="inDawSw"><div class="knob"></div></div>
   </div>
   <div class="fnote" style="margin-top:12px">La entrada del DAW y los demás dispositivos se eligen en Ajustes.</div>
+</div>
+
+<!-- Q&A -->
+<div class="sheet" id="faqSheet">
+  <div class="grabber"></div>
+  <h2>Preguntas frecuentes</h2>
+  <div class="faq">
+    <details>
+      <summary>¿Qué es Monitor?</summary>
+      <p>Monitor es la sala de reuniones virtuales de Darker Project pensada para músicos y productores. A diferencia de las videollamadas tradicionales, está diseñada para que la música se escuche como debe: puedes transmitir el audio de tu DAW en estéreo y alta calidad como una fuente independiente de tu voz, compartir pantalla y reunir a todos en un solo lugar. Úsala para revisar mezclas y producciones con clientes, dictar clases de música, coordinar con tu banda o simplemente escuchar música en vivo con amigos.</p>
+    </details>
+    <details>
+      <summary>¿Qué es Darker Project?</summary>
+      <p>Darker Project es un estudio creativo dedicado a la música: producción, mezcla y experiencias para artistas. De ahí nacen iniciativas como Darker Sessions, sesiones de música en vivo, y Monitor, esta plataforma de reuniones para músicos. Su misión es crear herramientas y espacios hechos por y para la comunidad musical.</p>
+    </details>
+    <details>
+      <summary>¿Cómo empiezo a usar Monitor?</summary>
+      <p>Pulsa "Iniciar sala" y acepta los permisos de cámara y micrófono cuando el navegador los pida. Copia el enlace de la sala y envíaselo a quien quieras: al abrirlo desde su computadora o teléfono, le pedirá los mismos permisos y entrará directo. Sin cuentas y sin instalar nada.</p>
+    </details>
+    <details>
+      <summary>¿Cómo transmito el audio de mi DAW?</summary>
+      <p>Necesitas un dispositivo de audio virtual (un "driver" de audio virtual) instalado en la computadora donde corre tu DAW. Puede ser BlackHole (gratis, Mac), Loopback (de pago, Mac), VB-CABLE (Windows) o el driver de Zoom (ZoomAudioDevice) si ya tienes Zoom instalado.</p>
+      <p>Luego: 1) en tu DAW, manda la salida de audio hacia ese dispositivo; 2) en Monitor, abre Ajustes y selecciona ese mismo dispositivo en "Entrada del DAW". Verás moverse el medidor y todos en la sala escucharán tu mezcla en estéreo y alta calidad — tú incluido, a través de Monitor.</p>
+    </details>
+    <details>
+      <summary>¿Tiene límite de tiempo?</summary>
+      <p>No. Por el momento Monitor no tiene límite de tiempo y es completamente gratuito. Conforme la plataforma crezca, evaluaremos algún tipo de suscripción para mantenerla viva y funcional al 100%, siempre pensando en que sea cómoda y accesible para todos los artistas y músicos.</p>
+    </details>
+    <details>
+      <summary>¿Cuántas personas pueden estar en una sala?</summary>
+      <p>Hasta 5 personas en simultáneo por el momento, para que todo corra fluido y con la mejor calidad. Seguiremos mejorando la plataforma para que soporte muchas más personas en el futuro.</p>
+    </details>
+    <details>
+      <summary>¿Necesito instalar algo?</summary>
+      <p>No. Monitor corre directo en el navegador (Chrome, Safari, Edge o Firefox), en computadora o teléfono. Lo único adicional es el dispositivo de audio virtual, y solo si vas a transmitir el audio de tu DAW.</p>
+    </details>
+    <details>
+      <summary>¿Funciona en teléfonos y tablets?</summary>
+      <p>Sí. Tus invitados pueden entrar desde iPhone, iPad o Android con solo abrir el enlace. La única limitación es del sistema: desde iPhone o iPad no se puede compartir pantalla, pero pueden ver la tuya y escuchar todo en alta calidad.</p>
+    </details>
+    <details>
+      <summary>¿Qué tan bueno es el audio?</summary>
+      <p>El canal del DAW viaja en estéreo, a alta tasa de bits y sin los filtros de voz (cancelación de eco, supresión de ruido y ganancia automática) que arruinan la música en las videollamadas comunes, y tiene su propio control de ganancia. Es una calidad muy superior a la de una llamada normal, ideal para revisar mezclas con clientes.</p>
+    </details>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>

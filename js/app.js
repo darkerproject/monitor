@@ -565,7 +565,7 @@
   }
 
   // ---------- sheets ----------
-  var sheetIds=["sheet","peopleSheet","inputsSheet"];
+  var sheetIds=["sheet","peopleSheet","inputsSheet","faqSheet"];
   function openSheet(id){
     sheetIds.forEach(function(s){$(s).classList.toggle("show",s===id);});
     $("scrim").classList.add("show");
@@ -577,6 +577,7 @@
 
   // ---------- wiring ----------
   document.addEventListener("DOMContentLoaded",function(){
+    $("faqBtn").addEventListener("click",function(){openSheet("faqSheet");});
     $("themeBtn").addEventListener("click",function(){applyTheme(document.documentElement.getAttribute("data-theme")!=="dark");});
     $("startBtn").addEventListener("click",startHost);
 

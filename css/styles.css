@@ -34,6 +34,8 @@
   [data-theme="dark"] .logo{filter:invert(1)}
   .brand{font-size:18px; font-weight:700; letter-spacing:-.01em}
   .header .spacer{flex:1}
+  .qa-btn{font-size:12.5px; font-weight:600; padding:7px 13px; border-radius:16px; background:var(--fill); color:var(--text); transition:filter .15s, background .15s}
+  .qa-btn:hover{background:var(--line)}
   .iconbtn{
     width:36px; height:36px; border-radius:50%; display:grid; place-items:center;
     color:var(--text-2); transition:background .15s, color .15s;
@@ -46,13 +48,13 @@
     position:fixed; inset:0; padding-top:56px;
     display:flex; align-items:center; justify-content:center;
   }
-  .home-inner{text-align:center; max-width:840px; padding:30px}
+  .home-inner{text-align:center; max-width:1080px; padding:30px}
   .home-brand{display:flex; align-items:center; justify-content:center; gap:11px; margin-bottom:36px}
   .home-brand img{height:28px; opacity:.95}
   [data-theme="dark"] .home-brand img{filter:invert(1)}
   .home-brand span{font-size:23px; font-weight:700; letter-spacing:-.01em}
-  #home h1{font-size:58px; font-weight:700; letter-spacing:-.035em; margin:0 0 20px; line-height:1.05}
-  #home .lede{font-size:17px; color:var(--text-2); line-height:1.6; margin:0 auto 32px; max-width:640px}
+  #home h1{font-size:clamp(34px,4.6vw,58px); font-weight:700; letter-spacing:-.035em; margin:0 0 20px; line-height:1.05; white-space:nowrap}
+  #home .lede{font-size:17px; color:var(--text-2); line-height:1.6; margin:0 auto 32px; max-width:780px}
   .btn-primary{
     background:var(--blue); color:#fff; font-size:17px; font-weight:600;
     padding:15px 40px; border-radius:13px; transition:transform .08s, filter .15s;
@@ -242,6 +244,14 @@
   .switchrow .t b{display:block; font-size:15px; font-weight:600}
   .switchrow .t span{display:block; font-size:13px; color:var(--text-2); margin-top:3px; line-height:1.4}
 
+  .faq details{border-bottom:1px solid var(--line)}
+  .faq details:last-of-type{border-bottom:none}
+  .faq summary{cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center; gap:12px; padding:14px 0; font-size:15px; font-weight:600}
+  .faq summary::-webkit-details-marker{display:none}
+  .faq summary::after{content:"+"; font-size:19px; font-weight:400; color:var(--text-2); flex:0 0 auto; transition:transform .2s}
+  .faq details[open] summary::after{transform:rotate(45deg)}
+  .faq p{margin:0 0 14px; font-size:13.5px; color:var(--text-2); line-height:1.6}
+
   .toast{
     position:fixed; left:50%; bottom:108px; transform:translateX(-50%) translateY(16px);
     background:var(--surface); border:1px solid var(--line); color:var(--text);
@@ -280,7 +290,7 @@
     .monitor-card{display:none}
     #devicesCtrl{display:none}
     #dawField{display:none}
-    #home h1{font-size:34px; margin-bottom:14px}
+    #home h1{font-size:34px; margin-bottom:14px; white-space:normal}
     #home .lede{font-size:15.5px}
     .home-brand{margin-bottom:26px}
     .home-inner{padding:24px}
