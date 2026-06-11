@@ -253,12 +253,11 @@
   }
   .faq-title{font-size:17px; font-weight:700; letter-spacing:-.01em}
   .faq-scroll{flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch}
-  .faq-content{max-width:1040px; margin:0 auto; padding:30px 44px calc(110px + env(safe-area-inset-bottom)); text-align:left}
+  .faq-content{max-width:1040px; margin:0; padding:30px 44px calc(110px + env(safe-area-inset-bottom)); text-align:left}
   .faq-content details{border-bottom:0.5px solid var(--line)}
-  .faq-content details:first-of-type{border-top:0.5px solid var(--line)}
   .faq-content summary{
     cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:baseline; gap:28px;
-    padding:32px 0; font-size:clamp(28px,3.5vw,48px); font-weight:700; letter-spacing:-.025em; line-height:1.08; color:var(--text);
+    padding:28px 0; font-size:clamp(24px,2.8vw,38px); font-weight:700; letter-spacing:-.02em; line-height:1.1; color:var(--text);
   }
   .faq-content summary::-webkit-details-marker{display:none}
   .faq-content summary::after{content:"+"; font-size:34px; font-weight:200; color:var(--text-2); flex:0 0 auto; transition:transform .2s}
@@ -307,7 +306,6 @@
     #home h1{font-size:34px; margin-bottom:14px; white-space:normal}
     .faq-content{max-width:680px; padding:14px 24px calc(80px + env(safe-area-inset-bottom))}
     .faq-content details{border-bottom:1px solid var(--line)}
-    .faq-content details:first-of-type{border-top:none}
     .faq-content summary{align-items:center; gap:14px; padding:18px 0; font-size:16px; font-weight:600; letter-spacing:-.01em; line-height:1.3}
     .faq-content summary::after{font-size:22px; font-weight:300}
     .faq-content p{margin:0 0 16px}
