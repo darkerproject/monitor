@@ -253,11 +253,14 @@
   }
   .faq-title{font-size:17px; font-weight:700; letter-spacing:-.01em}
   .faq-scroll{flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch}
-  .faq-content{max-width:680px; margin:0 auto; padding:36px 24px calc(80px + env(safe-area-inset-bottom))}
-  .faq-content section + section{margin-top:36px}
-  .faq-content h3{font-size:19px; font-weight:700; letter-spacing:-.02em; margin:0 0 10px}
-  .faq-content p{font-size:15px; color:var(--text-2); line-height:1.65; margin:0 0 12px}
-  .faq-content p:last-child{margin-bottom:0}
+  .faq-content{max-width:680px; margin:0 auto; padding:14px 24px calc(80px + env(safe-area-inset-bottom))}
+  .faq-content details{border-bottom:1px solid var(--line)}
+  .faq-content details:last-of-type{border-bottom:none}
+  .faq-content summary{cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center; gap:14px; padding:18px 0; font-size:16px; font-weight:600; letter-spacing:-.01em}
+  .faq-content summary::-webkit-details-marker{display:none}
+  .faq-content summary::after{content:"+"; font-size:22px; font-weight:300; color:var(--text-2); flex:0 0 auto; transition:transform .2s}
+  .faq-content details[open] summary::after{transform:rotate(45deg)}
+  .faq-content p{font-size:15px; color:var(--text-2); line-height:1.65; margin:0 0 16px}
 
   .toast{
     position:fixed; left:50%; bottom:108px; transform:translateX(-50%) translateY(16px);
