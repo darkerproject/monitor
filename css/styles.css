@@ -54,7 +54,7 @@
   [data-theme="dark"] .home-brand img{filter:invert(1)}
   .home-brand span{font-size:23px; font-weight:700; letter-spacing:-.01em}
   #home h1{font-size:clamp(34px,4.6vw,58px); font-weight:700; letter-spacing:-.035em; margin:0 0 20px; line-height:1.05; white-space:nowrap}
-  #home .lede{font-size:17px; color:var(--text-2); line-height:1.6; margin:0 auto 32px; max-width:780px}
+  #home .lede{font-size:17px; color:var(--text-2); line-height:1.6; margin:0 auto 32px; max-width:780px; text-wrap:pretty}
   .btn-primary{
     background:var(--blue); color:#fff; font-size:17px; font-weight:600;
     padding:15px 40px; border-radius:13px; transition:transform .08s, filter .15s;
@@ -244,13 +244,20 @@
   .switchrow .t b{display:block; font-size:15px; font-weight:600}
   .switchrow .t span{display:block; font-size:13px; color:var(--text-2); margin-top:3px; line-height:1.4}
 
-  .faq details{border-bottom:1px solid var(--line)}
-  .faq details:last-of-type{border-bottom:none}
-  .faq summary{cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center; gap:12px; padding:14px 0; font-size:15px; font-weight:600}
-  .faq summary::-webkit-details-marker{display:none}
-  .faq summary::after{content:"+"; font-size:19px; font-weight:400; color:var(--text-2); flex:0 0 auto; transition:transform .2s}
-  .faq details[open] summary::after{transform:rotate(45deg)}
-  .faq p{margin:0 0 14px; font-size:13.5px; color:var(--text-2); line-height:1.6}
+  .faq-page{position:fixed; inset:0; z-index:80; background:var(--bg); display:flex; flex-direction:column}
+  .faq-page[hidden]{display:none}
+  .faq-top{
+    flex:0 0 auto; height:56px; display:flex; align-items:center; justify-content:space-between;
+    padding:0 18px; border-bottom:1px solid var(--line);
+    background:var(--glass); backdrop-filter:blur(20px) saturate(1.6); -webkit-backdrop-filter:blur(20px) saturate(1.6);
+  }
+  .faq-title{font-size:17px; font-weight:700; letter-spacing:-.01em}
+  .faq-scroll{flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch}
+  .faq-content{max-width:680px; margin:0 auto; padding:36px 24px calc(80px + env(safe-area-inset-bottom))}
+  .faq-content section + section{margin-top:36px}
+  .faq-content h3{font-size:19px; font-weight:700; letter-spacing:-.02em; margin:0 0 10px}
+  .faq-content p{font-size:15px; color:var(--text-2); line-height:1.65; margin:0 0 12px}
+  .faq-content p:last-child{margin-bottom:0}
 
   .toast{
     position:fixed; left:50%; bottom:108px; transform:translateX(-50%) translateY(16px);
