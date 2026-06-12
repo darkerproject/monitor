@@ -175,10 +175,6 @@
     box-shadow:inset 0 1px 0 var(--glass-edge), var(--shadow);
   }
   .people-fab[hidden]{display:none}
-  .people-fab .fab-txt{display:none; font-size:12.5px; font-weight:600; white-space:nowrap}
-  .people-fab.pill{width:auto; border-radius:23px; padding:0 13px 0 16px; display:flex; align-items:center; gap:9px}
-  .people-fab.pill .fab-txt{display:inline}
-  .people-fab.pill .count{display:none}
   .people-fab svg{width:21px; height:21px; stroke:var(--text); fill:none; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round}
   .people-fab .count{
     position:absolute; top:-4px; right:-4px; min-width:18px; height:18px; padding:0 5px;
@@ -303,6 +299,20 @@
     font-size:14px; font-weight:600; overflow:hidden; flex:0 0 auto}
   .person-av img{width:100%; height:100%; object-fit:cover}
   .person-name{font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+
+  .person-name{flex:1}
+  .req-accept{background:var(--blue); color:#fff; font-weight:600; font-size:13px; padding:8px 15px; border-radius:9px; transition:filter .15s}
+  .req-accept:hover{filter:brightness(1.06)}
+  .req-reject{background:var(--fill); color:var(--text); font-size:13px; padding:8px 13px; border-radius:9px}
+  .people-fab .count[hidden]{display:none}
+
+  .waiting{position:fixed; inset:0; z-index:70; display:flex; align-items:center; justify-content:center; background:var(--bg); padding:24px}
+  .waiting[hidden]{display:none}
+  .wc{text-align:center; max-width:340px}
+  .wc-dot{width:10px; height:10px; border-radius:50%; background:var(--blue); margin:0 auto 18px; animation:wpulse 1.2s infinite}
+  @keyframes wpulse{50%{opacity:.25; transform:scale(.8)}}
+  .wc-title{font-size:19px; font-weight:700; letter-spacing:-.01em; margin-bottom:8px}
+  .wc-sub{font-size:14px; color:var(--text-2); line-height:1.5}
 
   .input-row{display:flex; align-items:center; justify-content:space-between; gap:13px; padding:13px 0; border-bottom:1px solid var(--line); cursor:pointer}
   .input-row:last-of-type{border-bottom:none}

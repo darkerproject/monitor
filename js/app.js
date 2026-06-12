@@ -13,7 +13,8 @@
   var myName=localStorage.getItem("myName")||"";
   var myAvatar=localStorage.getItem("myAvatar")||"";
   var myIndex=null; // host=1, invitados reciben el suyo en welcome
-  var connecting=false;
+  var pending={}; // solicitudes en espera (solo host)
+  var awaitingApproval=false;
   var preMicOn=true,preCamOn=true,pendingJoin=null;
   var nextIndex=2;  // solo lo usa el host
   var $=function(id){return document.getElementById(id);};
@@ -164,18 +165,73 @@
     return p;
   }
   function setupData(dc){
-    var p=ensurePeer(dc.peer);
-    p.dc=dc;
-    dc.on("open",function(){
-      dc.send(myProfileMsg());
-      if(role==="host"){
-        var others=Object.keys(peers).filter(function(k){return k!==dc.peer&&peers[k].dc&&peers[k].dc.open;});
-        dc.send({type:"welcome",peers:others,index:nextIndex++});
+    var isApplicant=(role==="host"&&!peers[dc.peer]);
+    if(isApplicant){
+      pending[dc.peer]={dc:dc,name:"",avatar:"",notified:false};
+      updateRequestsUI();
+    } else {
+      var p=ensurePeer(dc.peer);p.dc=dc;
+    }
+    dc.on("open",function(){if(!pending[dc.peer])dc.send(myProfileMsg());});
+    dc.on("data",function(msg){
+      if(!msg||!msg.type)return;
+      var req=pending[dc.peer];
+      if(req){
+        if(msg.type==="profile"){
+          req.name=msg.name||"";req.avatar=msg.avatar||"";
+          if(!req.notified){req.notified=true;toast((req.name||"Alguien")+" quiere entrar a la sala");}
+          updateRequestsUI();
+        }
+        return; // en espera: no puede hacer nada mas
       }
+      handleData(dc.peer,msg);
     });
-    dc.on("data",function(msg){handleData(dc.peer,msg);});
-    dc.on("close",function(){removePeer(dc.peer);});
+    dc.on("close",function(){
+      if(pending[dc.peer]){delete pending[dc.peer];updateRequestsUI();return;}
+      if(role==="guest"&&awaitingApproval){awaitingApproval=false;$("waitTitle").textContent="La sala se cerró";$("waitSub").textContent="Intenta con un enlace nuevo.";return;}
+      removePeer(dc.peer);
+    });
     dc.on("error",function(){});
+  }
+  // ---------- solicitudes (host) ----------
+  function acceptRequest(id){
+    var req=pending[id];if(!req)return;
+    delete pending[id];
+    var p=ensurePeer(id);
+    p.dc=req.dc;p.name=req.name;p.avatar=req.avatar;
+    try{
+      req.dc.send(myProfileMsg());
+      var others=Object.keys(peers).filter(function(k){return k!==id&&peers[k].dc&&peers[k].dc.open;});
+      req.dc.send({type:"welcome",peers:others,index:nextIndex++});
+    }catch(e){}
+    updateTile(p);updateRequestsUI();updatePeersUI();
+  }
+  function rejectRequest(id){
+    var req=pending[id];if(!req)return;
+    delete pending[id];
+    try{req.dc.send({type:"rejected"});}catch(e){}
+    setTimeout(function(){try{req.dc.close();}catch(e){}},400);
+    updateRequestsUI();
+  }
+  function updateRequestsUI(){
+    var ids=Object.keys(pending),n=ids.length;
+    var c=$("reqCount");c.textContent=n;c.hidden=(n===0);
+    $("reqEmpty").style.display=n?"none":"block";
+    var list=$("reqList");list.innerHTML="";
+    ids.forEach(function(id){
+      var r=pending[id];
+      var row=document.createElement("div");row.className="person";
+      var av=document.createElement("div");av.className="person-av";
+      if(r.avatar){var i=document.createElement("img");i.src=r.avatar;av.appendChild(i);}
+      else av.textContent=(r.name||"?").trim().charAt(0).toUpperCase();
+      var nm=document.createElement("span");nm.className="person-name";nm.textContent=r.name||"Invitado";
+      var no=document.createElement("button");no.className="req-reject";no.textContent="Rechazar";
+      no.addEventListener("click",function(){rejectRequest(id);});
+      var ok=document.createElement("button");ok.className="req-accept";ok.textContent="Aceptar";
+      ok.addEventListener("click",function(){acceptRequest(id);});
+      row.appendChild(av);row.appendChild(nm);row.appendChild(no);row.appendChild(ok);
+      list.appendChild(row);
+    });
   }
   function handleData(id,msg){
     if(!msg||!msg.type)return;
@@ -349,10 +405,6 @@
     document.body.classList.toggle("has-remote",n>0);
     $("grid").classList.toggle("solo",n===0);
     $("peopleCount").textContent=n+1;
-    if(n>0)connecting=false;
-    var fab=$("peopleCtrl");
-    fab.classList.toggle("pill",connecting&&n===0);
-    fab.hidden=(n===0&&!connecting);
     // lista del panel Personas
     var list=$("peopleList");list.innerHTML="";
     var mkRow=function(name,avatar,me){
@@ -419,6 +471,7 @@
   // ---------- inicio ----------
   function startHost(){
     role="host";myIndex=1;document.body.classList.add("role-host");
+    $("reqCtrl").hidden=false;
     var b=$("startBtn");b.disabled=true;b.textContent="Pidiendo permisos…";
     ensureCtx();
     getMedia().then(function(){
@@ -431,7 +484,7 @@
         $("shareLink").value=url;$("shareLink2").value=url;
       });
       peer.on("connection",setupData);
-      peer.on("call",function(c){c.answer(buildOutStream(),{sdpTransform:preferOpusHQ});setupCall(c);});
+      peer.on("call",function(c){if(!peers[c.peer]){try{c.close();}catch(e){}return;}c.answer(buildOutStream(),{sdpTransform:preferOpusHQ});setupCall(c);});
       peer.on("error",function(e){toast("Error: "+e.type);});
     }).catch(permsError);
   }
@@ -439,18 +492,22 @@
     role="guest";hostId=hid;document.body.classList.add("role-guest");
     ensureCtx();
     getMedia().then(function(){
-      applyInitialAV();connecting=true;enterRoom();refreshMyUI();
+      awaitingApproval=true;
+      $("waitingCard").hidden=false;
+      refreshMyUI();
       peer=new Peer(undefined,{debug:1});
       peer.on("open",function(id){
         myId=id;
         var url=location.origin+location.pathname+"#"+hid;
         $("shareLink").value=url;$("shareLink2").value=url;
         var dc=peer.connect(hid);setupData(dc);
-        var call=peer.call(hid,buildOutStream(),{sdpTransform:preferOpusHQ});setupCall(call);
       });
       peer.on("connection",setupData);
       peer.on("call",function(c){c.answer(buildOutStream(),{sdpTransform:preferOpusHQ});setupCall(c);});
-      peer.on("error",function(e){if(e.type==="peer-unavailable"){connecting=false;updatePeersUI();toast("No se encontró la sala. Pide un enlace nuevo.");}else toast("Error: "+e.type);});
+      peer.on("error",function(e){
+        if(e.type==="peer-unavailable"){$("waitTitle").textContent="No se encontró la sala";$("waitSub").textContent="El enlace puede haber expirado. Pide uno nuevo.";}
+        else toast("Error: "+e.type);
+      });
     }).catch(permsError);
   }
   function permsError(err){
@@ -569,6 +626,7 @@
   }
   function hangUp(){
     Object.keys(peers).forEach(function(k){try{peers[k].call&&peers[k].call.close();peers[k].dc&&peers[k].dc.close();}catch(e){}});
+    Object.keys(pending).forEach(function(k){try{pending[k].dc.close();}catch(e){}});
     if(peer)peer.destroy();
     if(localStream)localStream.getTracks().forEach(function(t){t.stop();});
     if(screenStream)screenStream.getTracks().forEach(function(t){t.stop();});
@@ -598,7 +656,7 @@
   }
 
   // ---------- sheets ----------
-  var sheetIds=["sheet","peopleSheet","inputsSheet","prejoinSheet"];
+  var sheetIds=["sheet","peopleSheet","inputsSheet","prejoinSheet","reqSheet"];
   function openSheet(id){
     sheetIds.forEach(function(s){$(s).classList.toggle("show",s===id);});
     $("scrim").classList.add("show");
@@ -643,6 +701,7 @@
     $("devicesCtrl").addEventListener("click",function(){openSheet("inputsSheet");});
     $("camCtrl").addEventListener("click",toggleCam);
     $("peopleCtrl").addEventListener("click",function(){openSheet("peopleSheet");});
+    $("reqCtrl").addEventListener("click",function(){openSheet("reqSheet");});
     $("gearCtrl").addEventListener("click",function(){openSheet("sheet");});
     $("hangCtrl").addEventListener("click",hangUp);
     $("scrim").addEventListener("click",function(){if($("prejoinSheet").classList.contains("show"))return;closeSheets();});
