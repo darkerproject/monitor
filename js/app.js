@@ -255,11 +255,25 @@
     } else if(msg.type==="cam"){
       p.cam=!!msg.on;p.screen=!!msg.screen;if(p.screen)ensurePeerScreenTile(p);updateTile(p);updatePeersUI();
     } else if(msg.type==="welcome"&&role==="guest"){
-      if(!myIndex){myIndex=msg.index;broadcast(myProfileMsg());refreshMyUI();}
+      if(!myIndex)myIndex=msg.index;
+      if(awaitingApproval){
+        awaitingApproval=false;
+        $("waitingCard").hidden=true;
+        applyInitialAV();enterRoom();
+        var call=peer.call(hostId,buildOutStream(),{sdpTransform:preferOpusHQ});setupCall(call);
+      }
+      broadcast(myProfileMsg());refreshMyUI();
       (msg.peers||[]).forEach(function(pid){
         if(pid===myId||peers[pid])return;
         connectToPeer(pid); // el recién llegado inicia con cada existente
       });
+    } else if(msg.type==="rejected"&&role==="guest"){
+      awaitingApproval=false;
+      $("waitingCard").hidden=false;
+      $("waitTitle").textContent="No fuiste admitido";
+      $("waitSub").textContent="El anfitrión no aceptó tu solicitud.";
+      if(localStream)localStream.getTracks().forEach(function(t){t.stop();});
+      try{if(peer)peer.destroy();}catch(e){}
     }
   }
   function connectToPeer(pid){
