@@ -213,6 +213,14 @@
     setTimeout(function(){try{req.dc.close();}catch(e){}},400);
     updateRequestsUI();
   }
+  function updateHostTopUI(){
+    if(role!=="host")return;
+    var reqs=Object.keys(pending).length,members=Object.keys(peers).length;
+    // el boton de ingresos aparece con la primera solicitud y se queda para siempre
+    $("reqCtrl").hidden=!(reqs>0||members>0);
+    // el card del enlace se va en cuanto alguien toca la puerta
+    document.body.classList.toggle("has-requests",reqs>0);
+  }
   function updateRequestsUI(){
     var ids=Object.keys(pending),n=ids.length;
     var c=$("reqCount");c.textContent=n;c.hidden=(n===0);
@@ -232,6 +240,7 @@
       row.appendChild(av);row.appendChild(nm);row.appendChild(no);row.appendChild(ok);
       list.appendChild(row);
     });
+    updateHostTopUI();
   }
   function handleData(id,msg){
     if(!msg||!msg.type)return;
@@ -419,6 +428,7 @@
     Object.keys(peers).forEach(function(k){var p=peers[k];mkRow(displayName(p.name,p.index),p.avatar,false);});
     updateMyTile();
     applyLayout();
+    updateHostTopUI();
   }
   function refreshMyUI(){
     $("nameInput").value=myName;
@@ -471,7 +481,6 @@
   // ---------- inicio ----------
   function startHost(){
     role="host";myIndex=1;document.body.classList.add("role-host");
-    $("reqCtrl").hidden=false;
     var b=$("startBtn");b.disabled=true;b.textContent="Pidiendo permisos…";
     ensureCtx();
     getMedia().then(function(){
