@@ -479,22 +479,26 @@
   }
 
   // ---------- inicio ----------
+  function initHostPeer(){
+    if(peer)return;
+    peer=new Peer(undefined,{debug:1});
+    peer.on("open",function(id){
+      myId=id;hostId=id;
+      var url=location.origin+location.pathname+"#"+id;
+      $("shareLink").value=url;$("shareLink2").value=url;
+    });
+    peer.on("connection",setupData);
+    peer.on("call",function(c){if(!peers[c.peer]||!localStream){try{c.close();}catch(e){}return;}c.answer(buildOutStream(),{sdpTransform:preferOpusHQ});setupCall(c);});
+    peer.on("error",function(e){toast("Error: "+e.type);});
+  }
   function startHost(){
     role="host";myIndex=1;document.body.classList.add("role-host");
     var b=$("startBtn");b.disabled=true;b.textContent="Pidiendo permisos…";
     ensureCtx();
+    initHostPeer();
     getMedia().then(function(){
       applyInitialAV();
       enterRoom();refreshMyUI();
-      peer=new Peer(undefined,{debug:1});
-      peer.on("open",function(id){
-        myId=id;hostId=id;
-        var url=location.origin+location.pathname+"#"+id;
-        $("shareLink").value=url;$("shareLink2").value=url;
-      });
-      peer.on("connection",setupData);
-      peer.on("call",function(c){if(!peers[c.peer]){try{c.close();}catch(e){}return;}c.answer(buildOutStream(),{sdpTransform:preferOpusHQ});setupCall(c);});
-      peer.on("error",function(e){toast("Error: "+e.type);});
     }).catch(permsError);
   }
   function joinGuest(hid){
@@ -682,6 +686,8 @@
     $("themeBtn").addEventListener("click",function(){applyTheme(document.documentElement.getAttribute("data-theme")!=="dark");});
     $("startBtn").addEventListener("click",function(){
       pendingJoin="host";
+      role="host";
+      initHostPeer();
       $("prejoinGo").textContent="Iniciar sala";
       openSheet("prejoinSheet");
       if(preMicOn)startMicPreview();
