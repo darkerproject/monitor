@@ -202,7 +202,7 @@
 <!-- PRE-JOIN -->
 <div class="sheet" id="prejoinSheet">
   <div class="grabber"></div><button class="sheet-x" aria-label="Cerrar"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
-  <h2>Antes de entrar</h2>
+  <h2 id="prejoinTitle">Antes de entrar</h2>
   <div class="input-row" id="preMicRow">
     <div class="t"><b>Micrófono</b><span>Entrar con el micrófono activado</span></div>
     <div class="switch on" id="preMicSw"><div class="knob"></div></div>
@@ -213,6 +213,7 @@
     <div class="switch on" id="preCamSw"><div class="knob"></div></div>
   </div>
   <div class="pre-cam-wrap" id="preCamWrap"><video id="preCamVideo" autoplay playsinline muted></video></div>
+  <div class="pre-saved-note" id="preSavedNote" style="display:none">Ya tienes esta sala guardada en Inicio, opción “Unirme”.</div>
   <div class="input-row" id="preSaveRow" style="display:none">
     <div class="t"><b>Guardar esta sala</b><span id="preSaveName">—</span></div>
     <div class="switch" id="preSaveSw"><div class="knob"></div></div>

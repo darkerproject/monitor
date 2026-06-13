@@ -283,6 +283,7 @@
   .pre-cam-wrap.show{display:block}
   .pre-cam-wrap video{width:100%; height:100%; object-fit:cover; transform:scaleX(-1); display:block}
 
+  .pre-saved-note{font-size:13.5px; color:var(--text-2); line-height:1.5; padding:2px 0 6px}
   .sheet-go{display:block; width:100%; margin-top:20px; text-align:center}
 
   .toast{

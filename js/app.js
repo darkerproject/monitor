@@ -730,6 +730,8 @@
     hostCustomId=customId||null;hostRoomName=roomName||"";
     initHostPeer();
     $("preSaveRow").style.display="none";
+    $("preSavedNote").style.display="none";
+    $("prejoinTitle").textContent=roomName||"Antes de entrar";
     $("prejoinGo").textContent=roomName?("Abrir "+roomName):"Iniciar sala";
     openSheet("prejoinSheet");
     if(preMicOn)startMicPreview();
@@ -740,9 +742,11 @@
     var saved=loadRooms("savedRooms").some(function(r){return r.id===id;});
     var mine=loadRooms("myRooms").some(function(r){return r.id===id;});
     var offer=!!name&&!saved&&!mine;
+    $("prejoinTitle").textContent=name||"Antes de entrar";
     preSaveOn=false;$("preSaveSw").classList.remove("on");
     $("preSaveRow").style.display=offer?"flex":"none";
-    $("preSaveName").textContent=name?('La verás en "Unirse"'):"";
+    $("preSaveName").textContent='Lo encontrarás en Inicio, opción \u201CUnirme\u201D';
+    $("preSavedNote").style.display=(name&&(saved||mine))?"block":"none";
     $("prejoinGo").textContent="Entrar a la sala";
     openSheet("prejoinSheet");
     if(preMicOn)startMicPreview();
