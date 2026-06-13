@@ -659,12 +659,21 @@
   function hangUp(){
     Object.keys(peers).forEach(function(k){try{peers[k].call&&peers[k].call.close();peers[k].dc&&peers[k].dc.close();}catch(e){}});
     Object.keys(pending).forEach(function(k){try{pending[k].dc.close();}catch(e){}});
-    if(peer)peer.destroy();
+    if(peer){try{peer.destroy();}catch(e){}}
     if(localStream)localStream.getTracks().forEach(function(t){t.stop();});
     if(screenStream)screenStream.getTracks().forEach(function(t){t.stop();});
     if(dawStream)dawStream.getTracks().forEach(function(t){t.stop();});
     if(meterRAF)cancelAnimationFrame(meterRAF);
-    location.hash="";location.reload();
+    var phone=window.matchMedia&&window.matchMedia("(max-width:480px)").matches;
+    if(phone){
+      // volver a inicio al instante (sin recarga pesada de Safari)
+      $("room").classList.remove("show");
+      $("home").style.display="";
+      if(location.hash){history.replaceState(null,"",location.pathname+location.search);}
+      setTimeout(function(){location.reload();},60); // recarga en segundo plano para limpiar estado
+    } else {
+      location.hash="";location.reload();
+    }
   }
 
   // ---------- avatar ----------
@@ -689,11 +698,18 @@
 
   // ---------- sheets ----------
   var sheetIds=["sheet","peopleSheet","inputsSheet","prejoinSheet","reqSheet","myRoomsSheet","joinSheet"];
+  function cancelPrejoin(){
+    // aborta el flujo de entrada y libera lo reservado
+    stopMicPreview();stopCamPreview();
+    if(pendingJoin==="host"&&peer){try{peer.destroy();}catch(e){}peer=null;role=null;hostCustomId=null;hostRoomName="";}
+    pendingJoin=null;
+  }
   function openSheet(id){
     sheetIds.forEach(function(s){$(s).classList.toggle("show",s===id);});
     $("scrim").classList.add("show");
   }
   function closeSheets(){
+    if($("prejoinSheet").classList.contains("show"))cancelPrejoin();
     sheetIds.forEach(function(s){$(s).classList.remove("show");});
     $("scrim").classList.remove("show");
   }
@@ -797,10 +813,11 @@
         var sr=loadRooms("savedRooms");
         if(!sr.some(function(x){return x.id===pendingJoin;})){sr.push({id:pendingJoin,name:joinRoomName});storeRooms("savedRooms",sr);toast('Sala "'+joinRoomName+'" guardada');}
       }
-      closeSheets();
-      if(pendingJoin==="host")startHost();
-      else if(pendingJoin)joinGuest(pendingJoin);
-      pendingJoin=null;
+      var go=pendingJoin;pendingJoin=null; // evita que closeSheets aborte
+      sheetIds.forEach(function(s){$(s).classList.remove("show");});
+      $("scrim").classList.remove("show");
+      if(go==="host")startHost();
+      else if(go)joinGuest(go);
     });
 
     var copyFn=function(inputId,btnId){
@@ -818,7 +835,8 @@
     $("reqCtrl").addEventListener("click",function(){openSheet("reqSheet");});
     $("gearCtrl").addEventListener("click",function(){openSheet("sheet");});
     $("hangCtrl").addEventListener("click",hangUp);
-    $("scrim").addEventListener("click",function(){if($("prejoinSheet").classList.contains("show"))return;closeSheets();});
+    $("scrim").addEventListener("click",closeSheets);
+    document.querySelectorAll(".sheet-x").forEach(function(b){b.addEventListener("click",closeSheets);});
 
     $("inScreenRow").addEventListener("click",toggleScreen);
     $("inDawRow").addEventListener("click",toggleDaw);
