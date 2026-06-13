@@ -26,7 +26,11 @@
     <div class="home-brand"><img src="assets/dp-logo.png" alt="Darker Project"><span>Monitor</span></div>
     <h1>La sala de reuniones para músicos</h1>
     <p class="lede">Reuniones virtuales con audio en alta calidad: revisa producciones con tus clientes, dicta clases, junta a tu banda o comparte música en&nbsp;vivo.</p>
-    <button class="btn-primary" id="startBtn">Iniciar sala</button>
+    <div class="home-actions">
+      <button class="btn-primary" id="startBtn">Sala Xpress</button>
+      <button class="btn-secondary" id="myRoomsBtn">Mis salas</button>
+      <button class="btn-secondary" id="joinBtn">Unirse</button>
+    </div>
     <p class="home-note">Te pediremos permiso de micrófono y cámara.</p>
   </div>
 </div>
@@ -134,6 +138,43 @@
   <div class="fnote" style="margin-top:12px">La entrada del DAW y los demás dispositivos se eligen en Ajustes.</div>
 </div>
 
+<!-- MIS SALAS -->
+<div class="sheet" id="myRoomsSheet">
+  <div class="grabber"></div>
+  <h2>Mis salas</h2>
+  <div class="field">
+    <label>Crear sala personal</label>
+    <div class="linkrow">
+      <input id="newRoomName" placeholder="Nombre de tu sala" maxlength="30">
+      <button class="copy" id="createRoomBtn">Crear</button>
+    </div>
+    <div class="fnote">Tu sala es permanente: misma dirección siempre. Solo tú puedes abrirla.</div>
+  </div>
+  <div class="field">
+    <label>Tus salas</label>
+    <div id="myRoomsList" class="people-list"></div>
+    <div class="fnote" id="myRoomsEmpty">No tienes ninguna sala creada.</div>
+  </div>
+</div>
+
+<!-- UNIRSE -->
+<div class="sheet" id="joinSheet">
+  <div class="grabber"></div>
+  <h2>Unirse</h2>
+  <div class="field">
+    <label>Unirse con un enlace</label>
+    <div class="linkrow">
+      <input id="joinLinkInput" placeholder="Pega el enlace aquí">
+      <button class="copy" id="joinLinkBtn">Unirse</button>
+    </div>
+  </div>
+  <div class="field">
+    <label>Salas guardadas</label>
+    <div id="savedRoomsList" class="people-list"></div>
+    <div class="fnote" id="savedRoomsEmpty">No has guardado salas todavía.</div>
+  </div>
+</div>
+
 <!-- ESPERA DEL INVITADO -->
 <div class="waiting" id="waitingCard" hidden>
   <div class="wc">
@@ -172,6 +213,10 @@
     <div class="switch on" id="preCamSw"><div class="knob"></div></div>
   </div>
   <div class="pre-cam-wrap" id="preCamWrap"><video id="preCamVideo" autoplay playsinline muted></video></div>
+  <div class="input-row" id="preSaveRow" style="display:none">
+    <div class="t"><b>Guardar esta sala</b><span id="preSaveName">—</span></div>
+    <div class="switch" id="preSaveSw"><div class="knob"></div></div>
+  </div>
   <button class="btn-primary sheet-go" id="prejoinGo">Entrar a la sala</button>
 </div>
 

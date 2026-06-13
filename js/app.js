@@ -15,6 +15,7 @@
   var myIndex=null; // host=1, invitados reciben el suyo en welcome
   var pending={}; // solicitudes en espera (solo host)
   var awaitingApproval=false;
+  var hostCustomId=null,hostRoomName="",joinRoomName="",preSaveOn=false;
   var preMicOn=true,preCamOn=true,pendingJoin=null;
   var nextIndex=2;  // solo lo usa el host
   var $=function(id){return document.getElementById(id);};
@@ -495,15 +496,18 @@
   // ---------- inicio ----------
   function initHostPeer(){
     if(peer)return;
-    peer=new Peer(undefined,{debug:1});
+    peer=hostCustomId?new Peer(hostCustomId,{debug:1}):new Peer(undefined,{debug:1});
     peer.on("open",function(id){
       myId=id;hostId=id;
-      var url=location.origin+location.pathname+"#"+id;
+      var url=location.origin+location.pathname+"#"+id+(hostRoomName?"&n="+encodeURIComponent(hostRoomName):"");
       $("shareLink").value=url;$("shareLink2").value=url;
     });
     peer.on("connection",setupData);
     peer.on("call",function(c){if(!peers[c.peer]||!localStream){try{c.close();}catch(e){}return;}c.answer(buildOutStream(),{sdpTransform:preferOpusHQ});setupCall(c);});
-    peer.on("error",function(e){toast("Error: "+e.type);});
+    peer.on("error",function(e){
+      if(e.type==="unavailable-id"){toast("Esta sala ya está abierta en otra pestaña o dispositivo");return;}
+      toast("Error: "+e.type);
+    });
   }
   function startHost(){
     role="host";myIndex=1;document.body.classList.add("role-host");
@@ -521,6 +525,7 @@
     getMedia().then(function(){
       awaitingApproval=true;
       $("waitingCard").hidden=false;
+      if(joinRoomName)$("waitSub").textContent='Solicitaste entrar a "'+joinRoomName+'". Mantén esta pestaña abierta.';
       refreshMyUI();
       peer=new Peer(undefined,{debug:1});
       peer.on("open",function(id){
@@ -683,7 +688,7 @@
   }
 
   // ---------- sheets ----------
-  var sheetIds=["sheet","peopleSheet","inputsSheet","prejoinSheet","reqSheet"];
+  var sheetIds=["sheet","peopleSheet","inputsSheet","prejoinSheet","reqSheet","myRoomsSheet","joinSheet"];
   function openSheet(id){
     sheetIds.forEach(function(s){$(s).classList.toggle("show",s===id);});
     $("scrim").classList.add("show");
@@ -693,25 +698,105 @@
     $("scrim").classList.remove("show");
   }
 
+  // ---------- salas personales y guardadas ----------
+  function loadRooms(k){try{return JSON.parse(localStorage.getItem(k)||"[]");}catch(e){return [];}}
+  function storeRooms(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
+  function genId(){return (window.crypto&&crypto.randomUUID)?crypto.randomUUID():"r-"+Math.random().toString(36).slice(2)+Date.now().toString(36);}
+  function parseRoomLink(text){
+    text=(text||"").trim();
+    var h=text.indexOf("#")>=0?text.slice(text.indexOf("#")+1):text;
+    if(!h)return null;
+    var parts=h.split("&n=");
+    return {id:parts[0],name:parts[1]?decodeURIComponent(parts[1]):""};
+  }
+  function openHostPrejoin(customId,roomName){
+    pendingJoin="host";role="host";
+    hostCustomId=customId||null;hostRoomName=roomName||"";
+    initHostPeer();
+    $("preSaveRow").style.display="none";
+    $("prejoinGo").textContent=roomName?("Abrir "+roomName):"Iniciar sala";
+    openSheet("prejoinSheet");
+    if(preMicOn)startMicPreview();
+    if(preCamOn)startCamPreview();
+  }
+  function openGuestPrejoin(id,name){
+    pendingJoin=id;joinRoomName=name||"";
+    var saved=loadRooms("savedRooms").some(function(r){return r.id===id;});
+    var mine=loadRooms("myRooms").some(function(r){return r.id===id;});
+    var offer=!!name&&!saved&&!mine;
+    preSaveOn=false;$("preSaveSw").classList.remove("on");
+    $("preSaveRow").style.display=offer?"flex":"none";
+    $("preSaveName").textContent=name?('La verás en "Unirse"'):"";
+    $("prejoinGo").textContent="Entrar a la sala";
+    openSheet("prejoinSheet");
+    if(preMicOn)startMicPreview();
+    if(preCamOn)startCamPreview();
+  }
+  function roomRow(room,actionLabel,onAction,onDelete){
+    var row=document.createElement("div");row.className="person";
+    var nm=document.createElement("span");nm.className="person-name";nm.textContent=room.name;
+    var del=document.createElement("button");del.className="row-del";del.textContent="\u2715";del.setAttribute("aria-label","Eliminar");
+    del.addEventListener("click",onDelete);
+    var act=document.createElement("button");act.className="req-accept";act.textContent=actionLabel;
+    act.addEventListener("click",onAction);
+    row.appendChild(nm);row.appendChild(del);row.appendChild(act);
+    return row;
+  }
+  function renderMyRooms(){
+    var rooms=loadRooms("myRooms"),list=$("myRoomsList");list.innerHTML="";
+    $("myRoomsEmpty").style.display=rooms.length?"none":"block";
+    rooms.forEach(function(r){
+      list.appendChild(roomRow(r,"Abrir",
+        function(){openHostPrejoin(r.id,r.name);},
+        function(){storeRooms("myRooms",loadRooms("myRooms").filter(function(x){return x.id!==r.id;}));renderMyRooms();}
+      ));
+    });
+  }
+  function renderSavedRooms(){
+    var rooms=loadRooms("savedRooms"),list=$("savedRoomsList");list.innerHTML="";
+    $("savedRoomsEmpty").style.display=rooms.length?"none":"block";
+    rooms.forEach(function(r){
+      list.appendChild(roomRow(r,"Entrar",
+        function(){openGuestPrejoin(r.id,r.name);},
+        function(){storeRooms("savedRooms",loadRooms("savedRooms").filter(function(x){return x.id!==r.id;}));renderSavedRooms();}
+      ));
+    });
+  }
+
   // ---------- wiring ----------
   document.addEventListener("DOMContentLoaded",function(){
     $("faqBtn").addEventListener("click",function(){closeSheets();$("faqPage").hidden=false;});
     $("faqClose").addEventListener("click",function(){$("faqPage").hidden=true;});
     $("themeBtn").addEventListener("click",function(){applyTheme(document.documentElement.getAttribute("data-theme")!=="dark");});
-    $("startBtn").addEventListener("click",function(){
-      pendingJoin="host";
-      role="host";
-      initHostPeer();
-      $("prejoinGo").textContent="Iniciar sala";
-      openSheet("prejoinSheet");
-      if(preMicOn)startMicPreview();
-      if(preCamOn)startCamPreview();
+    $("startBtn").addEventListener("click",function(){openHostPrejoin(null,"");});
+    $("myRoomsBtn").addEventListener("click",function(){renderMyRooms();openSheet("myRoomsSheet");});
+    $("joinBtn").addEventListener("click",function(){renderSavedRooms();openSheet("joinSheet");});
+    $("createRoomBtn").addEventListener("click",function(){
+      var name=$("newRoomName").value.trim();
+      if(!name){toast("Ponle un nombre a tu sala");return;}
+      var rooms=loadRooms("myRooms");
+      rooms.push({id:genId(),name:name});
+      storeRooms("myRooms",rooms);
+      $("newRoomName").value="";
+      renderMyRooms();
+      toast('Sala "'+name+'" creada');
     });
+    $("joinLinkBtn").addEventListener("click",function(){
+      var pl=parseRoomLink($("joinLinkInput").value);
+      if(!pl||!pl.id){toast("Ese enlace no parece válido");return;}
+      $("joinLinkInput").value="";
+      openGuestPrejoin(pl.id,pl.name);
+    });
+    $("preSaveRow").addEventListener("click",function(){preSaveOn=!preSaveOn;$("preSaveSw").classList.toggle("on",preSaveOn);});
     $("preMicRow").addEventListener("click",function(){preMicOn=!preMicOn;$("preMicSw").classList.toggle("on",preMicOn);ensureCtx();if(preMicOn)startMicPreview();else stopMicPreview();});
     $("preCamRow").addEventListener("click",function(){preCamOn=!preCamOn;$("preCamSw").classList.toggle("on",preCamOn);if(preCamOn)startCamPreview();else stopCamPreview();});
     $("prejoinGo").addEventListener("click",function(){
       micOn=preMicOn;camOn=preCamOn;
       stopMicPreview();stopCamPreview();
+      if(pendingJoin&&pendingJoin!=="host"&&preSaveOn&&joinRoomName){
+        var sr=loadRooms("savedRooms");
+        if(!sr.some(function(x){return x.id===pendingJoin;})){sr.push({id:pendingJoin,name:joinRoomName});storeRooms("savedRooms",sr);toast('Sala "'+joinRoomName+'" guardada');}
+      }
       closeSheets();
       if(pendingJoin==="host")startHost();
       else if(pendingJoin)joinGuest(pendingJoin);
@@ -779,6 +864,6 @@
     watchAspect($("meVideo"));
 
     var hash=location.hash.replace(/^#/,"");
-    if(hash){pendingJoin=hash;$("prejoinGo").textContent="Entrar a la sala";openSheet("prejoinSheet");if(preMicOn)startMicPreview();if(preCamOn)startCamPreview();}
+    if(hash){var pl=parseRoomLink(hash);if(pl&&pl.id)openGuestPrejoin(pl.id,pl.name);}
   });
 })();

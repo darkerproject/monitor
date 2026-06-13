@@ -63,6 +63,15 @@
   }
   .btn-primary:hover{filter:brightness(1.05)}
   .btn-primary:active{transform:scale(.98)}
+  .home-actions{display:flex; gap:12px; justify-content:center; flex-wrap:wrap}
+  .btn-secondary{
+    background:var(--fill); color:var(--text); font-size:17px; font-weight:600;
+    padding:15px 28px; border-radius:13px; transition:background .15s, transform .08s; letter-spacing:-.01em;
+  }
+  .btn-secondary:hover{background:var(--line)}
+  .btn-secondary:active{transform:scale(.98)}
+  .row-del{color:var(--text-2); font-size:15px; padding:6px 11px; border-radius:8px; transition:background .15s}
+  .row-del:hover{background:var(--fill); color:var(--danger)}
   .home-note{margin-top:20px; font-size:13px; color:var(--text-2)}
 
   /* ---------- ROOM ---------- */
@@ -333,6 +342,8 @@
     #devicesCtrl{display:none}
     #dawField{display:none}
     #home h1{font-size:34px; margin-bottom:14px; white-space:normal}
+    .home-actions{flex-direction:column}
+    .home-actions .btn-primary, .home-actions .btn-secondary{width:100%}
     .faq-content{max-width:680px; padding:14px 24px calc(80px + env(safe-area-inset-bottom))}
     .faq-content details{border-bottom:1px solid var(--line)}
     .faq-content summary{align-items:center; gap:14px; padding:18px 0; font-size:16px; font-weight:600; letter-spacing:-.01em; line-height:1.3}
