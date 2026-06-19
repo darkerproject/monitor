@@ -229,6 +229,26 @@
     max-height:calc(100vh - 70px); overflow-y:auto; visibility:hidden;
   }
   .sheet.show{transform:translateX(-50%) translateY(0); visibility:visible}
+
+  /* En PC, el sheet de Ajustes es un sidebar derecho de altura completa */
+  @media (min-width:481px){
+    /* el oscurecimiento cubre todo menos el header, y va por encima de ventanas flotantes y del botón de ingresos */
+    .scrim{top:56px; background:rgba(0,0,0,.5); z-index:90}
+    .sheet{z-index:91}
+    .toast{z-index:100}
+    #sheet{
+      left:auto; right:0; top:56px; bottom:0;
+      width:380px; max-width:90vw; z-index:91;
+      transform:translateX(100%);
+      border:none; border-left:1px solid var(--line); border-radius:0;
+      max-height:none; height:auto;
+      padding:26px 24px calc(26px + env(safe-area-inset-bottom));
+      box-shadow:-14px 0 44px rgba(0,0,0,.28);
+    }
+    #sheet.show{transform:translateX(0)}
+    #sheet .grabber{display:none}
+    #sheet h2{margin-top:2px}
+  }
   .sheet h2{font-size:20px; font-weight:700; letter-spacing:-.02em; margin:0 0 18px}
   .grabber{width:38px; height:5px; background:var(--line); border-radius:3px; margin:0 auto 16px}
   .sheet-x{position:absolute; top:16px; right:16px; width:30px; height:30px; border-radius:50%;
