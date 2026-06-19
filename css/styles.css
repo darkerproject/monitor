@@ -165,7 +165,6 @@
   body.has-remote .monitor-card{bottom:96px}
   .mrow + .mrow{margin-top:11px; padding-top:11px; border-top:1px solid var(--line)}
   .mrow .mlabel{font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--text); margin-bottom:7px}
-  .mrow.daw .mlabel{color:var(--blue)}
   .meter{display:flex; gap:2px; align-items:flex-end; height:26px; width:148px}
   .seg{flex:1; height:100%; background:var(--fill); border-radius:1.5px; transition:background .05s}
   .mrow .src{font-size:11px; color:var(--text); margin-top:7px; max-width:148px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
