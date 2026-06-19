@@ -308,6 +308,20 @@
     border-radius:11px; padding:13px; font-size:15px; font-family:inherit}
   .name-input:focus{outline:2px solid var(--blue); outline-offset:1px}
 
+  #eqField #eqSearch{display:block; margin-top:2px}
+  .eq-results{display:none; flex-direction:column; margin-top:6px; border:0.5px solid var(--line); border-radius:12px; overflow:hidden; max-height:240px; overflow-y:auto}
+  .eq-results.show{display:flex}
+  .eq-opt{text-align:left; background:var(--surface-2); color:var(--text); font-size:14px; font-family:inherit;
+    padding:11px 13px; border:none; border-bottom:0.5px solid var(--line); cursor:pointer; width:100%}
+  .eq-opt:last-child{border-bottom:none}
+  .eq-opt:hover{background:var(--fill)}
+  .eq-opt.empty{color:var(--text-2); cursor:default}
+  .eq-opt.empty:hover{background:var(--surface-2)}
+  .eq-current{font-size:13px; color:var(--text-2); margin-top:8px; display:none}
+  .eq-current.show{display:block}
+  .eq-current b{color:var(--text); font-weight:600}
+  .eq-current .eq-clear{color:var(--blue); cursor:pointer; margin-left:8px; font-weight:600}
+
   .people-list{display:flex; flex-direction:column; gap:4px; max-height:200px; overflow-y:auto}
   .person{display:flex; align-items:center; gap:11px; padding:7px 2px}
   .person-av{width:34px; height:34px; border-radius:50%; background:var(--fill); display:grid; place-items:center;

@@ -314,10 +314,12 @@
     stream.getAudioTracks().forEach(function(t,idx){
       if(p.audioEls.some(function(a){return a.dataset.tid===t.id;}))return;
       var a=document.createElement("audio");
-      a.autoplay=true;a.srcObject=new MediaStream([t]);
+      a.autoplay=true;
       a.dataset.tid=t.id;a.dataset.kind=idx===0?"voz":"daw";
       document.body.appendChild(a);
       p.audioEls.push(a);
+      if(idx===0){a.srcObject=new MediaStream([t]);}
+      else{eqAttach(a,new MediaStream([t]));}
       applySink(a);
       a.play().catch(function(){
         var once=function(){document.querySelectorAll("audio").forEach(function(el){el.play().catch(function(){});});document.removeEventListener("click",once);};
@@ -331,7 +333,7 @@
     delete peers[id];
     try{if(p.call)p.call.close();}catch(e){}
     try{if(p.dc)p.dc.close();}catch(e){}
-    p.audioEls.forEach(function(a){try{a.srcObject=null;a.remove();}catch(e){}});
+    p.audioEls.forEach(function(a){eqDetach(a);try{a.srcObject=null;a.remove();}catch(e){}});
     if(p.tile)p.tile.remove();
     if(p.screenTile)p.screenTile.remove();
     updatePeersUI();
@@ -547,6 +549,101 @@
     toast(msg);var b=$("startBtn");if(b){b.disabled=false;b.textContent="Iniciar sala";}
   }
 
+  // ---------- EQ de audífonos (corrección local por oyente) ----------
+  var eqOn=localStorage.getItem("eqOn")==="1";
+  var eqModel=localStorage.getItem("eqModel")||"";
+  var eqCatalog=null,eqLoading=false;
+  var eqTargets=[]; // {el, raw, srcNode, dst, nodes:[]}
+  var EQ_TYPE={PK:"peaking",LSC:"lowshelf",HSC:"highshelf"};
+
+  function loadEqCatalog(cb){
+    if(eqCatalog){cb&&cb();return;}
+    if(eqLoading){return;}
+    eqLoading=true;
+    fetch("assets/headphones-eq.json").then(function(r){return r.json();}).then(function(d){
+      eqCatalog=d;eqLoading=false;
+      if(typeof renderEqResults==="function"&&$("eqSearch"))renderEqResults($("eqSearch").value);
+      cb&&cb();
+    }).catch(function(){eqLoading=false;toast("No se pudo cargar el catálogo de audífonos");});
+  }
+  function findEqModel(name){
+    if(!eqCatalog||!name)return null;
+    for(var i=0;i<eqCatalog.models.length;i++)if(eqCatalog.models[i].n===name)return eqCatalog.models[i];
+    return null;
+  }
+  function eqTeardown(t){
+    if(t.srcNode){try{t.srcNode.disconnect();}catch(e){}t.srcNode=null;}
+    t.nodes.forEach(function(n){try{n.disconnect();}catch(e){}});t.nodes=[];
+    t.dst=null;
+  }
+  function eqApply(t){
+    eqTeardown(t);
+    var model=(eqOn&&eqModel)?findEqModel(eqModel):null;
+    if(!model){t.el.srcObject=t.raw;t.el.play&&t.el.play().catch(function(){});return;}
+    var ctx=ensureCtx();
+    var src=ctx.createMediaStreamSource(t.raw);
+    var dst=ctx.createMediaStreamDestination();
+    var pre=ctx.createGain();pre.gain.value=Math.pow(10,(model.p||0)/20);
+    src.connect(pre);var prev=pre;t.nodes.push(pre);
+    model.f.forEach(function(b){
+      var bq=ctx.createBiquadFilter();
+      bq.type=EQ_TYPE[b[0]]||"peaking";bq.frequency.value=b[1];bq.gain.value=b[2];bq.Q.value=b[3];
+      prev.connect(bq);prev=bq;t.nodes.push(bq);
+    });
+    prev.connect(dst);
+    t.srcNode=src;t.dst=dst;
+    t.el.srcObject=dst.stream;t.el.play&&t.el.play().catch(function(){});
+  }
+  function eqAttach(el,raw){var t={el:el,raw:raw,srcNode:null,dst:null,nodes:[]};eqTargets.push(t);eqApply(t);return t;}
+  function eqDetach(el){
+    for(var i=eqTargets.length-1;i>=0;i--){if(eqTargets[i].el===el){eqTeardown(eqTargets[i]);eqTargets.splice(i,1);}}
+  }
+  function eqRebuildAll(){
+    if(eqOn&&eqModel&&!eqCatalog){loadEqCatalog(eqRebuildAll);return;}
+    eqTargets.forEach(eqApply);
+  }
+  function updateEqCurrent(){
+    var el=$("eqCurrent");if(!el)return;
+    if(eqModel){
+      el.innerHTML='Calibrado para <b></b><span class="eq-clear">Quitar</span>';
+      el.querySelector("b").textContent=eqModel;
+      el.classList.add("show");
+      el.querySelector(".eq-clear").addEventListener("click",function(){
+        eqModel="";try{localStorage.removeItem("eqModel");}catch(e){}
+        var s=$("eqSearch");if(s)s.value="";
+        updateEqCurrent();eqRebuildAll();
+      });
+    }else{el.className="eq-current";el.textContent="";}
+  }
+  function selectEqModel(name){
+    eqModel=name;try{localStorage.setItem("eqModel",name);}catch(e){}
+    var s=$("eqSearch");if(s)s.value=name;
+    var r=$("eqResults");if(r){r.classList.remove("show");r.innerHTML="";}
+    if(!eqOn){eqOn=true;try{localStorage.setItem("eqOn","1");}catch(e){}var sw=$("eqSw");if(sw)sw.classList.add("on");}
+    updateEqCurrent();eqRebuildAll();
+    toast("Audífonos calibrados: "+name);
+  }
+  function renderEqResults(q){
+    var box=$("eqResults");if(!box)return;
+    q=(q||"").trim().toLowerCase();
+    if(!q){box.classList.remove("show");box.innerHTML="";return;}
+    if(!eqCatalog){loadEqCatalog();box.innerHTML='<div class="eq-opt empty">Cargando catálogo…</div>';box.classList.add("show");return;}
+    var out=[],i,m,terms=q.split(/\s+/);
+    for(i=0;i<eqCatalog.models.length&&out.length<12;i++){
+      m=eqCatalog.models[i];var hay=m.n.toLowerCase();
+      var ok=true;for(var k=0;k<terms.length;k++){if(hay.indexOf(terms[k])<0){ok=false;break;}}
+      if(ok)out.push(m);
+    }
+    box.innerHTML="";
+    if(!out.length){box.innerHTML='<div class="eq-opt empty">Sin resultados</div>';box.classList.add("show");return;}
+    out.forEach(function(m){
+      var b=document.createElement("button");b.className="eq-opt";b.type="button";b.textContent=m.n;
+      b.addEventListener("click",function(){selectEqModel(m.n);});
+      box.appendChild(b);
+    });
+    box.classList.add("show");
+  }
+
   // ---------- DAW ----------
   function startDaw(){
     if(!selDaw){openSheet("sheet");toast("Elige la entrada del DAW");return;}
@@ -562,7 +659,8 @@
       replaceAcross(dawSlotTrack,newTrack);
       dawSlotTrack=newTrack;
       if(!dawMonitorEl){dawMonitorEl=document.createElement("audio");dawMonitorEl.autoplay=true;document.body.appendChild(dawMonitorEl);}
-      dawMonitorEl.srcObject=dst.stream;
+      eqDetach(dawMonitorEl);
+      eqAttach(dawMonitorEl,dst.stream);
       applySink(dawMonitorEl);
       dawMonitorEl.play().catch(function(){});
       $("dawRow").style.display="block";
@@ -582,7 +680,7 @@
     if(dawStream)dawStream.getTracks().forEach(function(t){t.stop();});
     dawStream=null;
     if(dawNodes){try{dawNodes.src.disconnect();dawNodes.gain.disconnect();dawNodes.dst.stream.getTracks().forEach(function(t){t.stop();});}catch(e){}dawNodes=null;}
-    if(dawMonitorEl)dawMonitorEl.srcObject=null;
+    if(dawMonitorEl){eqDetach(dawMonitorEl);dawMonitorEl.srcObject=null;}
     $("dawRow").style.display="none";
     var dm=meters.filter(function(m){return m.id==="meterDaw";})[0];if(dm)dm.analyser=null;
     $("inDawSw").classList.remove("on");
@@ -869,6 +967,23 @@
     ["dawGainSlider","dawGainSlider2"].forEach(function(id){
       var el=$(id);if(el)el.addEventListener("input",function(){setDawGain(this.value);});
     });
+
+    // EQ de audífonos
+    if($("eqSw")){
+      $("eqSw").classList.toggle("on",eqOn);
+      if(eqModel){var es=$("eqSearch");if(es)es.value=eqModel;}
+      updateEqCurrent();
+      if(eqOn&&eqModel)loadEqCatalog(eqRebuildAll);
+      $("eqRow").addEventListener("click",function(ev){
+        if(ev.target.closest("#eqPicker"))return;
+        eqOn=!eqOn;try{localStorage.setItem("eqOn",eqOn?"1":"0");}catch(e){}
+        $("eqSw").classList.toggle("on",eqOn);
+        if(eqOn&&!eqModel){var s=$("eqSearch");if(s)s.focus();toast("Busca y elige tu modelo de audífonos");}
+        eqRebuildAll();
+      });
+      $("eqSearch").addEventListener("focus",function(){loadEqCatalog();if(this.value)renderEqResults(this.value);});
+      $("eqSearch").addEventListener("input",function(){renderEqResults(this.value);});
+    }
 
     // perfil
     $("nameInput").addEventListener("input",function(){

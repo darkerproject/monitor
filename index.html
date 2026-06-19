@@ -106,6 +106,19 @@
     <div class="switch" id="musicSw"><div class="knob"></div></div>
     <div class="t"><b>Modo música en el micrófono</b><span>Quita los filtros de voz (eco, ruido, ganancia automática) del micrófono. Útil si tu mezcla entra por el canal del micrófono.</span></div>
   </div>
+  <div class="field" id="eqField">
+    <label>Calibra tus audífonos</label>
+    <div class="switchrow" id="eqRow" style="margin-bottom:10px">
+      <div class="switch" id="eqSw"><div class="knob"></div></div>
+      <div class="t"><b>Corregir mis audífonos</b><span>Aplana el sonido del canal del DAW según tu modelo. Solo afecta lo que tú escuchas, no lo que envías.</span></div>
+    </div>
+    <div id="eqPicker">
+      <input type="text" id="eqSearch" class="name-input" placeholder="Busca tu modelo (ej. AirPods Pro)" autocomplete="off" spellcheck="false">
+      <div id="eqResults" class="eq-results"></div>
+      <div id="eqCurrent" class="eq-current"></div>
+    </div>
+    <div class="fnote">Catálogo de más de 6000 audífonos (AutoEq, curva Harman). La corrección es local: cada persona calibra los suyos.</div>
+  </div>
 </div>
 
 <!-- PERSONAS -->
