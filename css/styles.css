@@ -328,7 +328,7 @@
     border-radius:11px; padding:13px; font-size:15px; font-family:inherit}
   .name-input:focus{outline:2px solid var(--blue); outline-offset:1px}
 
-  #eqField #eqSearch{display:block; margin-top:2px}
+  #eqField #eqSearch{display:block; width:100%; margin-top:2px}
   .eq-results{display:none; flex-direction:column; margin-top:6px; border:0.5px solid var(--line); border-radius:12px; overflow:hidden; max-height:240px; overflow-y:auto}
   .eq-results.show{display:flex}
   .eq-opt{text-align:left; background:var(--surface-2); color:var(--text); font-size:14px; font-family:inherit;
