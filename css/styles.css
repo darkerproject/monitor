@@ -383,6 +383,20 @@
     .monitor-card{display:none}
     #devicesCtrl{display:none}
     #dawField{display:none}
+    /* en teléfono, Ajustes ocupa todo el alto, entra desde la derecha y deja el header visible */
+    .scrim{top:56px}
+    #sheet{
+      left:auto; right:0; top:56px; bottom:0;
+      width:100%; max-width:100%; z-index:91;
+      transform:translateX(100%);
+      border:none; border-radius:0;
+      max-height:none; height:auto;
+      overflow-y:auto; overscroll-behavior:none;
+      padding:22px 20px calc(24px + env(safe-area-inset-bottom));
+      box-shadow:none;
+    }
+    #sheet.show{transform:translateX(0)}
+    #sheet .grabber{display:none}
     #home h1{font-size:34px; margin-bottom:14px; white-space:normal}
     .home-actions{flex-direction:column}
     .home-actions .btn-primary, .home-actions .btn-secondary{width:100%}
