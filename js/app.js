@@ -6,6 +6,7 @@
   var selMic="",selCam="",selSpk="",selDaw="";
   var audioCtx=null,role=null,hostId=null,myId=null;
   var dawOn=false,dawStream=null,silentTrack=null,dawMonitorEl=null,dawNodes=null;
+  var dawMonitorTap=null,dawMonitorDst=null,dawMonitorEqNodes=[];
   var dawGain=parseFloat(localStorage.getItem("dawGain")||"1")||1;
   var voiceTrack=null,dawSlotTrack=null,screenSlotTrack=null,blankVideoTrack=null,meScreenTile=null,meScreenVideo=null;
   var meters=[],meterRAF=null;
@@ -105,7 +106,7 @@
   }
 
   // ---------- medidores ----------
-  function registerMeter(containerId,stream){
+  function registerMeter(containerId,streamOrNode,isNode){
     var cont=$(containerId);
     var entry=meters.filter(function(m){return m.id===containerId;})[0];
     if(!entry){
@@ -114,8 +115,9 @@
       meters.push(entry);
     }
     try{
-      var src=ensureCtx().createMediaStreamSource(stream);
-      entry.analyser=audioCtx.createAnalyser();entry.analyser.fftSize=512;
+      var ctx=ensureCtx();
+      var src=isNode?streamOrNode:ctx.createMediaStreamSource(streamOrNode);
+      entry.analyser=ctx.createAnalyser();entry.analyser.fftSize=512;
       src.connect(entry.analyser);
       entry.data=new Uint8Array(entry.analyser.fftSize);
     }catch(e){entry.analyser=null;}
@@ -601,6 +603,24 @@
   function eqRebuildAll(){
     if(eqOn&&eqModel&&!eqCatalog){loadEqCatalog(eqRebuildAll);return;}
     eqTargets.forEach(eqApply);
+    buildDawMonitorEq();
+  }
+  // monitor local del DAW: cadena de nodos directos (g → tap → [eq] → dst → audio), sin re-capturar streams
+  function buildDawMonitorEq(){
+    if(!dawMonitorTap||!dawMonitorDst)return;
+    var ctx=ensureCtx();
+    dawMonitorEqNodes.forEach(function(n){try{n.disconnect();}catch(e){}});dawMonitorEqNodes=[];
+    try{dawMonitorTap.disconnect();}catch(e){}
+    var model=(eqOn&&eqModel)?findEqModel(eqModel):null;
+    if(!model){dawMonitorTap.connect(dawMonitorDst);return;}
+    var pre=ctx.createGain();pre.gain.value=Math.pow(10,(model.p||0)/20);
+    dawMonitorTap.connect(pre);var prev=pre;dawMonitorEqNodes.push(pre);
+    model.f.forEach(function(b){
+      var bq=ctx.createBiquadFilter();
+      bq.type=EQ_TYPE[b[0]]||"peaking";bq.frequency.value=b[1];bq.gain.value=b[2];bq.Q.value=b[3];
+      prev.connect(bq);prev=bq;dawMonitorEqNodes.push(bq);
+    });
+    prev.connect(dawMonitorDst);
   }
   function updateEqCurrent(){
     var el=$("eqCurrent");if(!el)return;
@@ -659,13 +679,15 @@
       replaceAcross(dawSlotTrack,newTrack);
       dawSlotTrack=newTrack;
       if(!dawMonitorEl){dawMonitorEl=document.createElement("audio");dawMonitorEl.autoplay=true;document.body.appendChild(dawMonitorEl);}
-      eqDetach(dawMonitorEl);
-      eqAttach(dawMonitorEl,dst.stream);
+      dawMonitorTap=ctx.createGain();g.connect(dawMonitorTap);
+      dawMonitorDst=ctx.createMediaStreamDestination();
+      buildDawMonitorEq();
+      dawMonitorEl.srcObject=dawMonitorDst.stream;
       applySink(dawMonitorEl);
       dawMonitorEl.play().catch(function(){});
       $("dawRow").style.display="block";
       var dsel=$("dawSelect");$("dawSrcName").textContent=dsel.selectedOptions[0]?dsel.selectedOptions[0].textContent:"";
-      registerMeter("meterDaw",dst.stream);
+      registerMeter("meterDaw",g,true);
       $("inDawSw").classList.add("on");
       s.getAudioTracks()[0].onended=stopDaw;
       toast("Audio del DAW activado");
@@ -680,7 +702,10 @@
     if(dawStream)dawStream.getTracks().forEach(function(t){t.stop();});
     dawStream=null;
     if(dawNodes){try{dawNodes.src.disconnect();dawNodes.gain.disconnect();dawNodes.dst.stream.getTracks().forEach(function(t){t.stop();});}catch(e){}dawNodes=null;}
-    if(dawMonitorEl){eqDetach(dawMonitorEl);dawMonitorEl.srcObject=null;}
+    dawMonitorEqNodes.forEach(function(n){try{n.disconnect();}catch(e){}});dawMonitorEqNodes=[];
+    if(dawMonitorTap){try{dawMonitorTap.disconnect();}catch(e){}dawMonitorTap=null;}
+    if(dawMonitorDst){try{dawMonitorDst.stream.getTracks().forEach(function(t){t.stop();});}catch(e){}dawMonitorDst=null;}
+    if(dawMonitorEl)dawMonitorEl.srcObject=null;
     $("dawRow").style.display="none";
     var dm=meters.filter(function(m){return m.id==="meterDaw";})[0];if(dm)dm.analyser=null;
     $("inDawSw").classList.remove("on");
