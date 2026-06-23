@@ -8,7 +8,7 @@
   var dawOn=false,dawStream=null,silentTrack=null,dawMonitorEl=null,dawNodes=null;
   var dawMonitorTap=null,dawMonitorDst=null,dawMonitorEqNodes=[];
   var dawGain=parseFloat(localStorage.getItem("dawGain")||"1")||1;
-  var voiceTrack=null,dawSlotTrack=null,screenSlotTrack=null,blankVideoTrack=null,meScreenTile=null,meScreenVideo=null;
+  var voiceTrack=null,dawSlotTrack=null,screenSlotTrack=null,blankVideoTrack=null,blankCamTrack=null,camSlotTrack=null,meScreenTile=null,meScreenVideo=null;
   var meters=[],meterRAF=null;
   var peers={}; // id -> {dc, call, name, avatar, index, cam, screen, hasVideo, tile, video, audioEls:[]}
   var myName=localStorage.getItem("myName")||"";
@@ -54,6 +54,7 @@
   function getMedia(){
     return navigator.mediaDevices.getUserMedia({audio:micConstraints(),video:videoConstraints()}).then(function(s){
       localStream=s;voiceTrack=s.getAudioTracks()[0]||null;
+      camSlotTrack=s.getVideoTracks()[0]||null;
       $("meVideo").srcObject=s;
       registerMeter("meterMic",s);
       return populateDevices();
@@ -72,14 +73,21 @@
     blankVideoTrack=c.captureStream(1).getVideoTracks()[0];
     return blankVideoTrack;
   }
+  function getBlankCamTrack(){
+    if(blankCamTrack&&blankCamTrack.readyState==="live")return blankCamTrack;
+    var c=document.createElement("canvas");c.width=2;c.height=2;
+    c.getContext("2d").fillRect(0,0,2,2);
+    blankCamTrack=c.captureStream(1).getVideoTracks()[0];
+    return blankCamTrack;
+  }
   // saliente: [voz, slot DAW, video] — el receptor lee audio[0]=voz, audio[1]=DAW
   function buildOutStream(){
     var out=new MediaStream();
     if(voiceTrack)out.addTrack(voiceTrack);
     dawSlotTrack=(dawOn&&dawNodes)?dawNodes.dst.stream.getAudioTracks()[0]:getSilentTrack();
     out.addTrack(dawSlotTrack);
-    var cam=localStream?localStream.getVideoTracks()[0]:null;
-    if(cam)out.addTrack(cam);
+    var cam=(camOn&&camSlotTrack&&camSlotTrack.readyState==="live")?camSlotTrack:getBlankCamTrack();
+    out.addTrack(cam);
     screenSlotTrack=(sharing&&screenStream)?screenStream.getVideoTracks()[0]:getBlankVideoTrack();
     out.addTrack(screenSlotTrack);
     return out;
@@ -491,7 +499,14 @@
   }
   function applyInitialAV(){
     if(voiceTrack)voiceTrack.enabled=micOn;
-    if(localStream)localStream.getVideoTracks().forEach(function(t){t.enabled=camOn;});
+    if(localStream){
+      if(camOn){camSlotTrack=localStream.getVideoTracks()[0]||camSlotTrack;}
+      else{
+        var real=localStream.getVideoTracks()[0];
+        if(real){try{real.stop();localStream.removeTrack(real);}catch(e){}}
+        camSlotTrack=getBlankCamTrack();
+      }
+    }
     $("micCtrl").classList.toggle("off",!micOn);
     $("micLbl").textContent=micOn?"Mic":"Silenc.";
     $("camCtrl").classList.toggle("off",!camOn);
@@ -721,9 +736,30 @@
     $("micLbl").textContent=micOn?"Mic":"Silenc.";
   }
   function toggleCam(){
-    camOn=!camOn;localStream.getVideoTracks().forEach(function(t){t.enabled=camOn;});
-    $("camCtrl").classList.toggle("off",!camOn);
-    updateMyTile();notifyCam();
+    if(camOn){
+      // Apagar de verdad: detener la pista física (apaga la luz y libera la cámara)
+      camOn=false;
+      $("camCtrl").classList.toggle("off",true);
+      var real=localStream?localStream.getVideoTracks()[0]:null;
+      var blank=getBlankCamTrack();
+      if(real){replaceAcross(real,blank);try{real.stop();localStream.removeTrack(real);}catch(e){}}
+      else if(camSlotTrack&&camSlotTrack!==blank){replaceAcross(camSlotTrack,blank);}
+      camSlotTrack=blank;
+      updateMyTile();notifyCam();
+    }else{
+      // Encender: volver a adquirir la cámara
+      navigator.mediaDevices.getUserMedia({video:videoConstraints()}).then(function(s){
+        var nt=s.getVideoTracks()[0];
+        replaceAcross(camSlotTrack,nt);
+        camSlotTrack=nt;camOn=true;
+        $("camCtrl").classList.toggle("off",false);
+        if(localStream){
+          localStream.getVideoTracks().forEach(function(t){try{t.stop();localStream.removeTrack(t);}catch(e){}});
+          localStream.addTrack(nt);$("meVideo").srcObject=localStream;
+        }
+        updateMyTile();notifyCam();
+      }).catch(function(){toast("No se pudo encender la cámara");});
+    }
   }
   function ensureMeScreenTile(){
     if(meScreenTile)return;
@@ -770,13 +806,16 @@
     });
   }
   function swapCamera(){
+    if(!camOn)return Promise.resolve(); // se aplicará al encender la cámara (usa selCam)
     return navigator.mediaDevices.getUserMedia({video:videoConstraints()}).then(function(s){
       var nt=s.getVideoTracks()[0];
-      var old=localStream.getVideoTracks()[0];
-      if(old)replaceAcross(old,nt);
-      $("meVideo").srcObject=s;
-      localStream.getVideoTracks().forEach(function(t){t.stop();localStream.removeTrack(t);});
-      localStream.addTrack(nt);nt.enabled=camOn;
+      replaceAcross(camSlotTrack,nt);
+      camSlotTrack=nt;
+      if(localStream){
+        localStream.getVideoTracks().forEach(function(t){try{t.stop();localStream.removeTrack(t);}catch(e){}});
+        localStream.addTrack(nt);
+        $("meVideo").srcObject=localStream;
+      }
     });
   }
   function hangUp(){
