@@ -7,8 +7,34 @@
 <title>Monitor — Darker Project</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js"></script>
 <link rel="stylesheet" href="css/styles.css">
+
+<!-- PWA -->
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Monitor">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16.png">
+<style>
+  #splash{position:fixed; inset:0; z-index:99999; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:20px; background:#1c1c1e;
+    transition:opacity .5s ease; -webkit-tap-highlight-color:transparent;}
+  #splash.hide{opacity:0; pointer-events:none;}
+  #splash .splash-logo{width:88px; height:auto; filter:invert(1);
+    animation:splashPulse 1.6s ease-in-out infinite;}
+  #splash .splash-title{font-family:Helvetica,Arial,sans-serif; font-weight:700;
+    font-size:27px; letter-spacing:-.02em; color:#f5f5f7;}
+  @keyframes splashPulse{0%,100%{opacity:.55} 50%{opacity:1}}
+</style>
 </head>
 <body>
+
+<div id="splash">
+  <img class="splash-logo" src="assets/dp-logo.png" alt="Darker Project">
+  <div class="splash-title">Monitor</div>
+</div>
 
 <div class="header">
   <img class="logo" src="assets/dp-logo.png" alt="Darker Project">
@@ -285,5 +311,20 @@
 <div class="toast" id="toast"></div>
 
 <script src="js/app.js"></script>
+<script>
+  // Ocultar splash al cargar
+  window.addEventListener("load",function(){
+    setTimeout(function(){
+      var s=document.getElementById("splash");
+      if(s){s.classList.add("hide");setTimeout(function(){s.style.display="none";},600);}
+    },700);
+  });
+  // Service worker (PWA instalable + carga rápida)
+  if("serviceWorker" in navigator){
+    window.addEventListener("load",function(){
+      navigator.serviceWorker.register("/sw.js").catch(function(){});
+    });
+  }
+</script>
 </body>
 </html>
