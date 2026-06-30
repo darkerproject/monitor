@@ -703,7 +703,7 @@
       $("dawRow").style.display="block";
       var dsel=$("dawSelect");$("dawSrcName").textContent=dsel.selectedOptions[0]?dsel.selectedOptions[0].textContent:"";
       registerMeter("meterDaw",g,true);
-      $("inDawSw").classList.add("on");
+      $("inDawSw").classList.add("on");$("dawCtrl").classList.add("active");
       s.getAudioTracks()[0].onended=stopDaw;
       toast("Audio del DAW activado");
     }).catch(function(){toast("No se pudo capturar la entrada del DAW");$("inDawSw").classList.remove("on");});
@@ -723,7 +723,7 @@
     if(dawMonitorEl)dawMonitorEl.srcObject=null;
     $("dawRow").style.display="none";
     var dm=meters.filter(function(m){return m.id==="meterDaw";})[0];if(dm)dm.analyser=null;
-    $("inDawSw").classList.remove("on");
+    $("inDawSw").classList.remove("on");$("dawCtrl").classList.remove("active");
     toast("Audio del DAW desactivado");
   }
   function toggleDaw(){if(dawOn)stopDaw();else startDaw();}
@@ -776,7 +776,7 @@
         ensureMeScreenTile();
         meScreenVideo.srcObject=s;
         sharing=true;
-        $("inScreenSw").classList.add("on");$("inScreenName").textContent="Compartiendo";
+        $("inScreenSw").classList.add("on");$("inScreenName").textContent="Compartiendo";$("screenCtrl").classList.add("active");
         closeSheets();
         tr.onended=stopScreen;
         updatePeersUI();notifyCam();
@@ -791,7 +791,7 @@
     if(meScreenVideo)meScreenVideo.srcObject=null;
     if(screenStream)screenStream.getTracks().forEach(function(t){t.stop();});
     screenStream=null;
-    $("inScreenSw").classList.remove("on");$("inScreenName").textContent="Inactivo";
+    $("inScreenSw").classList.remove("on");$("inScreenName").textContent="Inactivo";$("screenCtrl").classList.remove("active");
     updatePeersUI();notifyCam();
   }
 
@@ -995,7 +995,8 @@
     $("copyBtn2").addEventListener("click",function(){copyFn("shareLink2","copyBtn2");});
 
     $("micCtrl").addEventListener("click",toggleMic);
-    $("devicesCtrl").addEventListener("click",function(){openSheet("inputsSheet");});
+    $("screenCtrl").addEventListener("click",toggleScreen);
+    $("dawCtrl").addEventListener("click",toggleDaw);
     $("camCtrl").addEventListener("click",toggleCam);
     $("peopleCtrl").addEventListener("click",function(){openSheet("peopleSheet");});
     $("reqCtrl").addEventListener("click",function(){openSheet("reqSheet");});

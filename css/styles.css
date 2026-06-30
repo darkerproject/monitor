@@ -381,7 +381,7 @@
     /* iOS hace auto-zoom si el campo tiene letra <16px; con 16px no salta en ningun navegador movil */
     .invite input, .linkrow input, .name-input, .field select{font-size:16px}
     .monitor-card{display:none}
-    #devicesCtrl{display:none}
+    #screenCtrl,#dawCtrl{display:none}
     #dawField{display:none}
     /* en teléfono, Ajustes ocupa todo el alto, entra desde la derecha y deja el header visible */
     .scrim{top:56px}
