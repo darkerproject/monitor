@@ -38,7 +38,7 @@
   function camVisible(){return camOn;}
   function displayName(name,index){return name||("User "+(index||"?"));}
   function myDisplayName(){return displayName(myName,myIndex);}
-  function myProfileMsg(){return {type:"profile",name:myName,avatar:myAvatar,index:myIndex,cam:camVisible(),screen:sharing};}
+  function myProfileMsg(){return {type:"profile",name:myName,avatar:myAvatar,index:myIndex,cam:camVisible(),screen:sharing,daw:dawOn};}
 
   // ---------- constraints ----------
   function micConstraints(){
@@ -261,6 +261,7 @@
       if(msg.index)p.index=msg.index;
       if(typeof msg.cam==="boolean")p.cam=msg.cam;
       if(typeof msg.screen==="boolean")p.screen=msg.screen;
+      if(typeof msg.daw==="boolean"){p.dawSharing=msg.daw;refreshConsole();}
       if(p.screen)ensurePeerScreenTile(p);
       updateTile(p);updatePeersUI();
     } else if(msg.type==="cam"){
@@ -751,6 +752,7 @@
       $("inDawSw").classList.add("on");setDawToolState(true);
       s.getAudioTracks()[0].onended=stopDaw;
       toast("Audio del DAW activado");
+      broadcast(myProfileMsg());
       refreshConsole();
     }).catch(function(){toast("No se pudo capturar la entrada del DAW");$("inDawSw").classList.remove("on");});
   }
@@ -771,6 +773,7 @@
     var dm=meters.filter(function(m){return m.id==="meterDaw";})[0];if(dm)dm.analyser=null;
     $("inDawSw").classList.remove("on");setDawToolState(false);
     toast("Audio del DAW desactivado");
+    broadcast(myProfileMsg());
     refreshConsole();
   }
   function setDawToolState(on){
@@ -1058,7 +1061,7 @@
   }
   function dawInRoom(){
     if(dawOn)return true;
-    return Object.keys(peers).some(function(k){return peers[k].dawAudio;});
+    return Object.keys(peers).some(function(k){return peers[k].dawSharing;});
   }
   function ytInRoom(){return !!ytCurrentVideo;}
 
