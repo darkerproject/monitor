@@ -310,7 +310,13 @@
   }
   function syncPeerVideos(p,stream){
     var vt=stream.getVideoTracks();
-    if(vt[0]){p.hasVideo=true;p.video.muted=true;p.video.srcObject=new MediaStream([vt[0]]);}
+    if(vt[0]){
+      p.hasVideo=true;p.video.muted=true;
+      p.video.srcObject=new MediaStream([vt[0]]);
+      p.video.play&&p.video.play().catch(function(){});
+      p.video.onloadedmetadata=function(){updateTile(p);updatePeersUI();};
+      vt[0].onunmute=function(){updateTile(p);};
+    }
     if(vt[1]){p.screenTrack=vt[1];if(p.screen)ensurePeerScreenTile(p);}
   }
   function ensurePeerScreenTile(p){
@@ -390,8 +396,9 @@
   }
   function createTile(p){
     var t=document.createElement("div");t.className="tile";
-    t.innerHTML='<video autoplay playsinline muted></video><div class="tile-off show"><img class="tile-avatar" alt=""><span class="tile-name-big"></span></div><div class="tile-tag"></div>';
-    t.appendChild(makeVolSlider(function(v){p.voiceVol=v/100;if(p.voiceAudio)p.voiceAudio.volume=p.voiceVol;},(p.voiceVol!=null?p.voiceVol*100:100)));
+    t.innerHTML='<video autoplay playsinline muted></video><div class="tile-off show"><img class="tile-avatar" alt=""><span class="tile-name-big"></span></div><div class="tile-bar"><div class="tile-tag"></div></div>';
+    var bar=t.querySelector(".tile-bar");
+    bar.appendChild(makeVolSlider(function(v){p.voiceVol=v/100;if(p.voiceAudio)p.voiceAudio.volume=p.voiceVol;},(p.voiceVol!=null?p.voiceVol*100:100)));
     $("grid").appendChild(t);
     p.tile=t;p.video=t.querySelector("video");watchAspect(p.video);
     updateTile(p);
