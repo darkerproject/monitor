@@ -467,3 +467,21 @@
   @media (max-width:480px){
     #ytPanel{right:10px; left:10px; bottom:82px; width:auto; max-width:none}
   }
+
+  /* ---------- Volumen por ventana ---------- */
+  .tile-vol{position:absolute; right:8px; bottom:8px; z-index:6; display:flex; align-items:center; gap:7px;
+    background:rgba(0,0,0,.45); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+    border-radius:13px; padding:0 10px; height:24px; opacity:.85; transition:opacity .15s}
+  .tile-vol:hover{opacity:1}
+  .tile-vol .tv-ic{display:grid; place-items:center}
+  .tile-vol .tv-ic svg{width:13px; height:13px; stroke:#fff; fill:none; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round}
+  .tile-vol .tv-range{-webkit-appearance:none; appearance:none; width:74px; height:3px; border-radius:2px;
+    background:rgba(255,255,255,.35); cursor:pointer; margin:0}
+  .tile-vol .tv-range::-webkit-slider-thumb{-webkit-appearance:none; width:11px; height:11px; border-radius:50%; background:#fff; cursor:pointer}
+  .tile-vol .tv-range::-moz-range-thumb{width:11px; height:11px; border:none; border-radius:50%; background:#fff; cursor:pointer}
+
+  .yt-tile{background:#000; position:relative; overflow:hidden}
+  #ytTileFrame{position:absolute; inset:0}
+  #ytTileFrame iframe{width:100%; height:100%; border:0; display:block}
+
+  .yt-head{cursor:grab; -webkit-user-select:none; user-select:none; touch-action:none}

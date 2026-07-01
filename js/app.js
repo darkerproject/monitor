@@ -330,7 +330,7 @@
       a.dataset.tid=t.id;a.dataset.kind=idx===0?"voz":"daw";
       document.body.appendChild(a);
       p.audioEls.push(a);
-      if(idx===0){a.srcObject=new MediaStream([t]);}
+      if(idx===0){a.srcObject=new MediaStream([t]);p.voiceAudio=a;a.volume=(p.voiceVol!=null?p.voiceVol:1);}
       else{eqAttach(a,new MediaStream([t]));}
       applySink(a);
       a.play().catch(function(){
@@ -379,9 +379,19 @@
     var upd=function(){v.classList.toggle("portrait",v.videoHeight>v.videoWidth);};
     v.addEventListener("loadedmetadata",upd);v.addEventListener("resize",upd);
   }
+  function makeVolSlider(onInput,initial){
+    var wrap=document.createElement("div");wrap.className="tile-vol";
+    wrap.innerHTML='<span class="tv-ic"><svg viewBox="0 0 24 24"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg></span><input type="range" class="tv-range" min="0" max="100">';
+    var r=wrap.querySelector(".tv-range");r.value=(initial!=null?initial:100);
+    var stop=function(e){e.stopPropagation();};
+    r.addEventListener("input",function(){onInput(+this.value);});
+    r.addEventListener("pointerdown",stop);r.addEventListener("click",stop);
+    return wrap;
+  }
   function createTile(p){
     var t=document.createElement("div");t.className="tile";
     t.innerHTML='<video autoplay playsinline muted></video><div class="tile-off show"><img class="tile-avatar" alt=""><span class="tile-name-big"></span></div><div class="tile-tag"></div>';
+    t.appendChild(makeVolSlider(function(v){p.voiceVol=v/100;if(p.voiceAudio)p.voiceAudio.volume=p.voiceVol;},(p.voiceVol!=null?p.voiceVol*100:100)));
     $("grid").appendChild(t);
     p.tile=t;p.video=t.querySelector("video");watchAspect(p.video);
     updateTile(p);
@@ -410,7 +420,8 @@
   function applyLayout(){
     var g=$("grid");
     var ids=Object.keys(peers);
-    var total=ids.length+1; // solo cámaras
+    var ytTile=$("ytTile");
+    var total=ids.length+1+(ytTile?1:0); // cámaras + YouTube si existe
     var sharerScreen=null;
     if(sharing&&meScreenTile)sharerScreen=meScreenTile;
     else{for(var i=0;i<ids.length;i++){var pp=peers[ids[i]];if(pp.screen&&pp.screenTile){sharerScreen=pp.screenTile;break;}}}
@@ -418,6 +429,7 @@
     screenTiles.forEach(function(t){t.hidden=(t!==sharerScreen);});
     document.body.classList.remove("layout-solo","layout-duo","layout-grid","layout-share");
     var cams=[$("meTile")].concat(ids.map(function(k){return peers[k].tile;})).filter(Boolean);
+    if(ytTile)cams.push(ytTile);
     cams.concat(screenTiles).forEach(function(t){t.classList.remove("big","strip","center-span");t.style.removeProperty("--i");});
     g.classList.toggle("solo",total===1&&!sharerScreen);
     g.style.gridTemplateColumns="";g.style.removeProperty("--cols");
@@ -870,7 +882,7 @@
   }
   // ---------- YouTube (referencias sincronizadas) ----------
   var YT_KEY="AIzaSyBKii3TN_TVgV5Y8GmjB36vK9CY8yb6s_w";
-  var ytPlayer=null,ytReady=false,ytCurrentVideo=null,ytSyncTimer=null,ytApplyingRemote=false,ytSearchTimer=null,ytGuestClosed=false;
+  var ytPlayer=null,ytReady=false,ytCurrentVideo=null,ytSyncTimer=null,ytApplyingRemote=false,ytSearchTimer=null,ytVol=100;
 
   function loadYTApi(cb){
     if(window.YT&&window.YT.Player){cb&&cb();return;}
@@ -881,31 +893,43 @@
     var prev=window.onYouTubeIframeAPIReady;
     window.onYouTubeIframeAPIReady=function(){if(prev)prev();cb&&cb();};
   }
+  function ensureYTTile(){
+    if($("ytTile"))return $("ytTile");
+    var t=document.createElement("div");t.className="tile yt-tile";t.id="ytTile";
+    var frame=document.createElement("div");frame.id="ytTileFrame";t.appendChild(frame);
+    var tag=document.createElement("div");tag.className="tile-tag";tag.textContent="YouTube";t.appendChild(tag);
+    t.appendChild(makeVolSlider(function(v){ytVol=v;if(ytPlayer&&ytPlayer.setVolume)ytPlayer.setVolume(v);},ytVol));
+    $("grid").appendChild(t);
+    applyLayout();
+    return t;
+  }
+  function removeYTTile(){var t=$("ytTile");if(t){t.remove();applyLayout();}}
   function ensureYTPlayer(cb){
     if(ytPlayer&&ytReady){cb&&cb();return;}
+    var target;
+    if(role==="host")target="ytFrame";
+    else{ensureYTTile();target="ytTileFrame";}
     loadYTApi(function(){
       if(ytPlayer){if(ytReady)cb&&cb();return;}
-      ytPlayer=new YT.Player("ytFrame",{
+      ytPlayer=new YT.Player(target,{
         height:"100%",width:"100%",videoId:"",
         playerVars:{playsinline:1,rel:0,modestbranding:1},
         events:{
-          "onReady":function(){ytReady=true;cb&&cb();},
+          "onReady":function(){ytReady=true;if(ytPlayer.setVolume)ytPlayer.setVolume(ytVol);cb&&cb();},
           "onStateChange":onYTStateChange
         }
       });
     });
   }
-  function openYTPanel(asGuest){
-    $("ytPanel").classList.add("show");
-    $("ytSearchWrap").style.display=(role==="host"&&!asGuest)?"block":"none";
+  function openYTPanel(){ // solo anfitrión: panel flotante con buscador
+    $("ytPanel").classList.add("show");$("ytSearchWrap").style.display="block";
   }
-  function closeYTPanel(){
+  function closeYTPanel(){ // solo anfitrión (botón X): cierra para todos
     $("ytPanel").classList.remove("show");$("ytPanel").classList.remove("has-video");
     if(ytPlayer&&ytPlayer.stopVideo){try{ytPlayer.stopVideo();}catch(e){}}
     ytCurrentVideo=null;
     if(ytSyncTimer){clearInterval(ytSyncTimer);ytSyncTimer=null;}
-    if(role==="host")broadcast({type:"yt",action:"close"});
-    else ytGuestClosed=true;
+    broadcast({type:"yt",action:"close"});
   }
   function ytHostPlay(videoId){
     openYTPanel();
@@ -933,15 +957,15 @@
   }
   function ytApplyRemote(msg){
     if(role==="host")return; // solo el anfitrión controla
-    if(msg.action==="close"){closeYTPanel();ytGuestClosed=false;return;}
-    if(msg.action==="load")ytGuestClosed=false;
-    if(ytGuestClosed)return; // el invitado cerró; no reabrir hasta una nueva referencia
-    openYTPanel(true);
+    if(msg.action==="close"){
+      if(ytPlayer&&ytPlayer.stopVideo){try{ytPlayer.stopVideo();}catch(e){}}
+      removeYTTile();ytCurrentVideo=null;return;
+    }
     ensureYTPlayer(function(){
       ytApplyingRemote=true;
       var cur=ytPlayer.getCurrentTime?ytPlayer.getCurrentTime():0;
       if(msg.videoId&&msg.videoId!==ytCurrentVideo){
-        ytCurrentVideo=msg.videoId;$("ytPanel").classList.add("has-video");
+        ytCurrentVideo=msg.videoId;
         ytPlayer.loadVideoById(msg.videoId,msg.time||0);
       } else if(msg.action==="play"){
         if(Math.abs(cur-(msg.time||0))>1.2)ytPlayer.seekTo(msg.time||0,true);
@@ -1111,6 +1135,27 @@
     $("toolsCtrl").addEventListener("click",function(){openSheet("toolsSheet");});
     $("toolYouTube").addEventListener("click",function(){closeSheets();openYTPanel();ensureYTPlayer(function(){});setTimeout(function(){var q=$("ytQuery");if(q)q.focus();},150);});
     $("ytClose").addEventListener("click",closeYTPanel);
+    (function(){
+      var panel=$("ytPanel"),handle=panel.querySelector(".yt-head");
+      var drag=false,sx,sy,ox,oy;
+      handle.addEventListener("pointerdown",function(e){
+        if(e.target.closest(".yt-x"))return;
+        drag=true;var r=panel.getBoundingClientRect();
+        panel.style.left=r.left+"px";panel.style.top=r.top+"px";panel.style.right="auto";panel.style.bottom="auto";
+        sx=e.clientX;sy=e.clientY;ox=r.left;oy=r.top;
+        try{handle.setPointerCapture(e.pointerId);}catch(err){}
+        handle.style.cursor="grabbing";
+      });
+      handle.addEventListener("pointermove",function(e){
+        if(!drag)return;
+        var nx=ox+(e.clientX-sx),ny=oy+(e.clientY-sy);
+        nx=Math.max(0,Math.min(nx,window.innerWidth-panel.offsetWidth));
+        ny=Math.max(0,Math.min(ny,window.innerHeight-panel.offsetHeight));
+        panel.style.left=nx+"px";panel.style.top=ny+"px";
+      });
+      handle.addEventListener("pointerup",function(){drag=false;handle.style.cursor="grab";});
+      handle.addEventListener("pointercancel",function(){drag=false;handle.style.cursor="grab";});
+    })();
     $("ytQuery").addEventListener("input",function(){
       var v=this.value;if(ytSearchTimer)clearTimeout(ytSearchTimer);
       ytSearchTimer=setTimeout(function(){ytSearch(v);},350);
