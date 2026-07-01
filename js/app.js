@@ -899,10 +899,6 @@
     if($("ytTile"))return $("ytTile");
     var t=document.createElement("div");t.className="tile yt-tile";t.id="ytTile";
     var frame=document.createElement("div");frame.id="ytTileFrame";t.appendChild(frame);
-    var tap=document.createElement("button");tap.className="yt-tap";tap.id="ytTap";tap.type="button";tap.hidden=true;
-    tap.innerHTML='<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z" fill="#fff" stroke="none"/></svg><span>Toca para escuchar</span>';
-    tap.addEventListener("click",function(){if(ytPlayer&&ytPlayer.playVideo)ytPlayer.playVideo();tap.hidden=true;});
-    t.appendChild(tap);
     var tag=document.createElement("div");tag.className="tile-tag";tag.textContent="YouTube";t.appendChild(tag);
     t.appendChild(makeVolSlider(function(v){ytVol=v;if(ytPlayer&&ytPlayer.setVolume)ytPlayer.setVolume(v);},ytVol));
     $("grid").appendChild(t);
@@ -917,12 +913,9 @@
     else{ensureYTTile();target="ytTileFrame";}
     loadYTApi(function(){
       if(ytPlayer){if(ytReady)cb&&cb();return;}
-      var pv=(role==="host")
-        ? {playsinline:1,rel:0,modestbranding:1}
-        : {playsinline:1,rel:0,modestbranding:1,controls:0,disablekb:1,fs:0,iv_load_policy:3};
       ytPlayer=new YT.Player(target,{
         height:"100%",width:"100%",videoId:"",
-        playerVars:pv,
+        playerVars:{playsinline:1,rel:0,modestbranding:1},
         events:{
           "onReady":function(){ytReady=true;if(ytPlayer.setVolume)ytPlayer.setVolume(ytVol);cb&&cb();},
           "onStateChange":onYTStateChange
@@ -973,23 +966,17 @@
     ensureYTPlayer(function(){
       ytApplyingRemote=true;
       var cur=ytPlayer.getCurrentTime?ytPlayer.getCurrentTime():0;
-      var wantPlay=false;
       if(msg.videoId&&msg.videoId!==ytCurrentVideo){
         ytCurrentVideo=msg.videoId;
-        ytPlayer.loadVideoById(msg.videoId,msg.time||0);wantPlay=true;
+        ytPlayer.loadVideoById(msg.videoId,msg.time||0);
       } else if(msg.action==="play"){
         if(Math.abs(cur-(msg.time||0))>1.2)ytPlayer.seekTo(msg.time||0,true);
-        ytPlayer.playVideo();wantPlay=true;
+        ytPlayer.playVideo();
       } else if(msg.action==="pause"){
         ytPlayer.seekTo(msg.time||0,true);ytPlayer.pauseVideo();
-        var tp0=$("ytTap");if(tp0)tp0.hidden=true;
       } else if(msg.action==="sync"){
-        if(Math.abs(cur-(msg.time||0))>1.5)ytPlayer.seekTo(msg.time||0,true);wantPlay=true;
+        if(Math.abs(cur-(msg.time||0))>1.5)ytPlayer.seekTo(msg.time||0,true);
       }
-      if(wantPlay){setTimeout(function(){
-        var tp=$("ytTap");if(!tp)return;
-        tp.hidden=(ytPlayer.getPlayerState&&ytPlayer.getPlayerState()===1);
-      },1400);}
       setTimeout(function(){ytApplyingRemote=false;},400);
     });
   }

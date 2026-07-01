@@ -481,12 +481,8 @@
   .tile-vol .tv-range::-moz-range-thumb{width:11px; height:11px; border:none; border-radius:50%; background:#fff; cursor:pointer}
 
   .yt-tile{background:#000; position:relative; overflow:hidden}
-  #ytTileFrame{position:absolute; inset:0; pointer-events:none}
+  #ytTileFrame{position:absolute; inset:0}
   #ytTileFrame iframe{width:100%; height:100%; border:0; display:block}
-  .yt-tap{position:absolute; inset:0; z-index:5; display:flex; flex-direction:column; gap:8px; align-items:center; justify-content:center;
-    background:rgba(0,0,0,.5); color:#fff; border:none; cursor:pointer; font-size:14px; font-weight:600; font-family:inherit}
-  .yt-tap[hidden]{display:none}
-  .yt-tap svg{width:42px; height:42px}
 
   .yt-head{cursor:grab; -webkit-user-select:none; user-select:none; touch-action:none}
 
@@ -497,3 +493,11 @@
   .yt-vol input{-webkit-appearance:none; appearance:none; flex:1; height:4px; border-radius:2px; background:var(--line); cursor:pointer; margin:0}
   .yt-vol input::-webkit-slider-thumb{-webkit-appearance:none; width:15px; height:15px; border-radius:50%; background:var(--blue); cursor:pointer; box-shadow:0 1px 3px rgba(0,0,0,.35)}
   .yt-vol input::-moz-range-thumb{width:15px; height:15px; border:none; border-radius:50%; background:var(--blue); cursor:pointer}
+
+  /* En dúo (2 personas, sin pantalla): volumen arriba (abajo queda tras la barra) */
+  body.layout-duo .tile:not(#meTile) .tile-vol{top:16px; bottom:auto; left:auto; right:16px; transform:none}
+  /* PiP con cámara apagada: fondo distinto para que no se funda con el fondo (evita "bloque sombreado") */
+  body.layout-duo #meTile .tile-off{background:var(--surface)}
+  @media (max-width:480px){
+    body.layout-duo .tile:not(#meTile) .tile-vol{left:50%; right:auto; transform:translateX(-50%); top:14px; bottom:auto}
+  }
