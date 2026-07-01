@@ -421,23 +421,25 @@
     var g=$("grid");
     var ids=Object.keys(peers);
     var ytTile=$("ytTile");
-    var total=ids.length+1+(ytTile?1:0); // cámaras + YouTube si existe
     var sharerScreen=null;
     if(sharing&&meScreenTile)sharerScreen=meScreenTile;
     else{for(var i=0;i<ids.length;i++){var pp=peers[ids[i]];if(pp.screen&&pp.screenTile){sharerScreen=pp.screenTile;break;}}}
     var screenTiles=[meScreenTile].concat(ids.map(function(k){return peers[k].screenTile;})).filter(Boolean);
     screenTiles.forEach(function(t){t.hidden=(t!==sharerScreen);});
+    var bigTile=sharerScreen||ytTile||null; // pantalla tiene prioridad; si no, YouTube ocupa el grande
     document.body.classList.remove("layout-solo","layout-duo","layout-grid","layout-share");
     var cams=[$("meTile")].concat(ids.map(function(k){return peers[k].tile;})).filter(Boolean);
-    if(ytTile)cams.push(ytTile);
+    if(ytTile&&ytTile!==bigTile)cams.push(ytTile);
+    var total=cams.length;
     cams.concat(screenTiles).forEach(function(t){t.classList.remove("big","strip","center-span");t.style.removeProperty("--i");});
-    g.classList.toggle("solo",total===1&&!sharerScreen);
+    if(ytTile)ytTile.classList.remove("big","strip","center-span");
+    g.classList.toggle("solo",total===1&&!bigTile);
     g.style.gridTemplateColumns="";g.style.removeProperty("--cols");
-    if(sharerScreen){
+    if(bigTile){
       document.body.classList.add("layout-share");
-      sharerScreen.classList.add("big");
+      bigTile.classList.add("big");
       cams.forEach(function(t,i){t.classList.add("strip");t.style.setProperty("--i",i);});
-      g.style.gridTemplateColumns="repeat("+Math.max(cams.length,1)+",1fr)"; // fila inferior en teléfono
+      g.style.gridTemplateColumns="repeat("+Math.max(cams.length,1)+",1fr)";
     } else if(total===1){
       document.body.classList.add("layout-solo");
     } else if(total===2){
@@ -1135,6 +1137,7 @@
     $("toolsCtrl").addEventListener("click",function(){openSheet("toolsSheet");});
     $("toolYouTube").addEventListener("click",function(){closeSheets();openYTPanel();ensureYTPlayer(function(){});setTimeout(function(){var q=$("ytQuery");if(q)q.focus();},150);});
     $("ytClose").addEventListener("click",closeYTPanel);
+    $("ytPanelVol").addEventListener("input",function(){ytVol=+this.value;if(ytPlayer&&ytPlayer.setVolume)ytPlayer.setVolume(ytVol);});
     (function(){
       var panel=$("ytPanel"),handle=panel.querySelector(".yt-head");
       var drag=false,sx,sy,ox,oy;
