@@ -94,8 +94,10 @@
   .tile-off.show{display:flex}
   .tile-avatar{width:84px; height:84px; border-radius:50%; object-fit:cover; display:none}
   .tile-name-big{font-size:22px; font-weight:600; display:none; max-width:80%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
-  .tile-tag{position:absolute; left:8px; top:8px; bottom:auto; font-size:11px; color:#fff; background:rgba(0,0,0,.42);
-    padding:3px 8px; border-radius:7px; backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); max-width:70%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .tile-bar{position:absolute; left:8px; top:8px; z-index:6; display:flex; align-items:flex-start; gap:6px; max-width:calc(100% - 16px); height:24px}
+  .tile-tag{font-size:11px; color:#fff; background:rgba(0,0,0,.42); height:24px; flex:0 0 auto; display:inline-flex; align-items:center;
+    padding:0 11px; border-radius:13px; backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+    max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; box-sizing:border-box}
   .grid.solo .tile-tag{display:none}
 
   /* ---- DÚO (2 personas): PC = el otro a pantalla completa + yo en PiP ---- */
@@ -107,8 +109,7 @@
   }
   body.layout-duo #meTile .tile-avatar{width:44px; height:44px}
   body.layout-duo #meTile .tile-name-big{font-size:13px}
-  body.layout-duo #meTile .tile-tag{font-size:10px; padding:2px 7px; left:6px; bottom:6px}
-  body.layout-duo .tile:not(#meTile) .tile-tag{top:16px; bottom:auto; left:16px; font-size:13px}
+  body.layout-duo #meTile .tile-tag{font-size:10px}
   body.layout-duo .tile:not(#meTile) video.portrait{object-fit:contain}
   body.layout-duo #meTile:has(video.portrait){aspect-ratio:3/4}
 
@@ -130,7 +131,7 @@
   }
   body.layout-share .tile.strip .tile-avatar{width:40px; height:40px}
   body.layout-share .tile.strip .tile-name-big{font-size:12px}
-  body.layout-share .tile.strip .tile-tag{font-size:10px; padding:2px 7px; left:6px; bottom:6px}
+  body.layout-share .tile.strip .tile-tag{font-size:10px}
 
   .invite{
     position:absolute; top:16px; left:50%; transform:translateX(-50%);
@@ -469,9 +470,8 @@
   }
 
   /* ---------- Volumen por ventana ---------- */
-  .tile-vol{position:absolute; left:50%; transform:translateX(-50%); bottom:8px; z-index:6; display:flex; align-items:center; gap:7px;
-    background:rgba(0,0,0,.32); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
-    border-radius:13px; padding:0 11px; height:23px; opacity:.8; transition:opacity .15s}
+  .tile-vol{flex:0 0 auto; display:inline-flex; align-items:center; gap:7px; background:rgba(0,0,0,.42); box-sizing:border-box;
+    backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); border-radius:13px; padding:0 11px; height:24px}
   .tile-vol:hover{opacity:1}
   .tile-vol .tv-ic{display:grid; place-items:center}
   .tile-vol .tv-ic svg{width:13px; height:13px; stroke:#fff; fill:none; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round}
@@ -494,10 +494,3 @@
   .yt-vol input::-webkit-slider-thumb{-webkit-appearance:none; width:15px; height:15px; border-radius:50%; background:var(--blue); cursor:pointer; box-shadow:0 1px 3px rgba(0,0,0,.35)}
   .yt-vol input::-moz-range-thumb{width:15px; height:15px; border:none; border-radius:50%; background:var(--blue); cursor:pointer}
 
-  /* En dúo (2 personas, sin pantalla): volumen arriba (abajo queda tras la barra) */
-  body.layout-duo .tile:not(#meTile) .tile-vol{top:16px; bottom:auto; left:auto; right:16px; transform:none}
-  /* PiP con cámara apagada: fondo distinto para que no se funda con el fondo (evita "bloque sombreado") */
-  body.layout-duo #meTile .tile-off{background:var(--surface)}
-  @media (max-width:480px){
-    body.layout-duo .tile:not(#meTile) .tile-vol{left:50%; right:auto; transform:translateX(-50%); top:14px; bottom:auto}
-  }
