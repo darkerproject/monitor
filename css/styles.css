@@ -382,7 +382,7 @@
     /* iOS hace auto-zoom si el campo tiene letra <16px; con 16px no salta en ningun navegador movil */
     .invite input, .linkrow input, .name-input, .field select{font-size:16px}
     .monitor-card{display:none}
-    #screenCtrl,#dawCtrl,#toolsCtrl{display:none}
+    #screenCtrl,#toolsCtrl{display:none}
     #dawField{display:none}
     /* en teléfono, Ajustes ocupa todo el alto, entra desde la derecha y deja el header visible */
     .scrim{top:calc(56px + env(safe-area-inset-top))}
@@ -430,14 +430,56 @@
   /* ---------- Herramientas / YouTube ---------- */
   body:not(.role-host) #toolsCtrl{display:none}
   .tool-item{display:flex; align-items:center; gap:14px; width:100%; text-align:left; background:var(--fill);
-    border:none; border-radius:14px; padding:14px 16px; cursor:pointer; color:var(--text)}
+    border:none; border-radius:14px; padding:14px 16px; cursor:pointer; color:var(--text); margin-bottom:10px}
+  .tool-item:last-child{margin-bottom:0}
   .tool-item:hover{background:var(--line)}
   .tool-ic{width:44px; height:44px; border-radius:12px; display:grid; place-items:center; flex-shrink:0}
   .tool-ic.yt{background:#000}
+  .tool-ic.daw{background:var(--control-fill)}
+  .tool-ic.daw svg{width:24px; height:24px; stroke:var(--text); fill:none; stroke-width:1.9; stroke-linecap:round}
   .tool-ic svg{width:30px; height:30px}
-  .tool-tx{display:flex; flex-direction:column; gap:2px}
+  .tool-tx{display:flex; flex-direction:column; gap:2px; flex:1; min-width:0}
   .tool-tx b{font-size:15px; font-weight:600}
   .tool-tx span{font-size:13px; color:var(--text-2); line-height:1.35}
+  .tool-state{flex:0 0 auto; font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase;
+    color:var(--text-2); background:var(--surface-2); border-radius:20px; padding:5px 11px}
+  .tool-item.on{background:rgba(0,87,255,.12)}
+  .tool-item.on .tool-ic.daw{background:var(--blue)}
+  .tool-item.on .tool-ic.daw svg{stroke:#fff}
+  .tool-item.on .tool-state{background:var(--blue); color:#fff}
+
+  /* ---------- CONSOLA ---------- */
+  #consoleSheet .console-rack{display:flex; gap:14px; overflow-x:auto; overflow-y:hidden;
+    padding:4px 2px 8px; -webkit-overflow-scrolling:touch; scrollbar-width:thin}
+  #consoleSheet .console-rack::-webkit-scrollbar{height:7px}
+  #consoleSheet .console-rack::-webkit-scrollbar-thumb{background:var(--line); border-radius:4px}
+  .console-ch{flex:0 0 auto; width:74px; display:flex; flex-direction:column; align-items:center; gap:11px;
+    background:var(--surface-2); border:1px solid var(--line); border-radius:16px; padding:14px 8px 12px}
+  .console-ch .ch-name{font-size:12px; font-weight:600; line-height:1.2; text-align:center; color:var(--text);
+    max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; letter-spacing:-.01em}
+  .console-ch .ch-name.src{color:var(--text-2); font-weight:700; font-size:10.5px; letter-spacing:.05em; text-transform:uppercase}
+  .console-ch .ch-mute{width:34px; height:34px; border-radius:50%; display:grid; place-items:center;
+    background:var(--fill); color:var(--text-2); flex:0 0 auto; transition:background .15s, color .15s}
+  .console-ch .ch-mute svg{width:17px; height:17px; stroke:currentColor; fill:none; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round}
+  .console-ch.muted .ch-mute{background:rgba(255,59,48,.15); color:var(--danger)}
+  .console-ch.muted .fader{opacity:.4}
+  .console-ch .ch-val{font-size:11px; font-weight:600; color:var(--text-2); font-variant-numeric:tabular-nums}
+
+  .fader{position:relative; width:34px; height:150px; touch-action:none; cursor:pointer; flex:0 0 auto}
+  .fader-track{position:absolute; left:50%; top:0; bottom:0; width:6px; transform:translateX(-50%);
+    background:var(--control-fill); border-radius:4px; overflow:hidden}
+  .fader-fill{position:absolute; left:0; right:0; bottom:0; background:var(--blue); border-radius:4px}
+  .fader-knob{position:absolute; left:50%; bottom:0; width:30px; height:15px; border-radius:5px;
+    background:var(--surface); border:1px solid var(--line); box-shadow:var(--shadow);
+    transform:translateX(-50%); pointer-events:none}
+  .fader-knob::after{content:""; position:absolute; left:6px; right:6px; top:50%; height:1.5px;
+    background:var(--text-2); transform:translateY(-50%); border-radius:2px}
+  .console-empty{font-size:13.5px; color:var(--text-2); line-height:1.55; padding:6px 2px 2px}
+  .console-empty.hide{display:none}
+
+  @media (min-width:481px){
+    #consoleSheet{width:min(640px,94vw)}
+  }
 
   #ytPanel{position:fixed; right:18px; bottom:96px; z-index:60; width:380px; max-width:calc(100vw - 24px);
     background:var(--surface); border:1px solid var(--line); border-radius:18px; overflow:hidden;

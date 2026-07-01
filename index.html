@@ -104,8 +104,8 @@
       <button class="ctrl" id="micCtrl"><span class="bubble"><svg viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg></span><span class="lbl" id="micLbl">Mic</span></button>
       <button class="ctrl" id="camCtrl"><span class="bubble"><svg viewBox="0 0 24 24"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg></span><span class="lbl">Cámara</span></button>
       <button class="ctrl" id="screenCtrl"><span class="bubble"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><polyline points="9 10 12 7 15 10"/><line x1="12" y1="7" x2="12" y2="14"/></svg></span><span class="lbl">Pantalla</span></button>
-      <button class="ctrl" id="dawCtrl"><span class="bubble"><svg viewBox="0 0 24 24"><line x1="4" y1="10" x2="4" y2="14"/><line x1="8" y1="6" x2="8" y2="18"/><line x1="12" y1="9" x2="12" y2="15"/><line x1="16" y1="4" x2="16" y2="20"/><line x1="20" y1="8" x2="20" y2="16"/></svg></span><span class="lbl">DAW</span></button>
       <button class="ctrl" id="toolsCtrl"><span class="bubble"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></span><span class="lbl">Tools</span></button>
+      <button class="ctrl" id="consoleCtrl"><span class="bubble"><svg viewBox="0 0 24 24"><line x1="6" y1="3" x2="6" y2="21"/><line x1="12" y1="3" x2="12" y2="21"/><line x1="18" y1="3" x2="18" y2="21"/><rect x="4" y="7" width="4" height="3.4" rx="1.2" fill="currentColor" stroke="none"/><rect x="10" y="13" width="4" height="3.4" rx="1.2" fill="currentColor" stroke="none"/><rect x="16" y="6" width="4" height="3.4" rx="1.2" fill="currentColor" stroke="none"/></svg></span><span class="lbl">Consola</span></button>
       <button class="ctrl" id="peopleCtrl"><span class="bubble"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span><span class="lbl">Personas</span></button>
       <button class="ctrl" id="gearCtrl"><span class="bubble"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span><span class="lbl">Ajustes</span></button>
       <button class="ctrl hang" id="hangCtrl"><span class="bubble"><svg viewBox="0 0 24 24"><path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.53.51 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.42 19.42 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.91 2H7a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .51 2.53 2 2 0 0 1-.45 2.11L7.3 9.63"/><line x1="23" y1="1" x2="1" y2="23"/></svg></span><span class="lbl">Salir</span></button>
@@ -320,6 +320,19 @@
     <span class="tool-ic yt"><svg viewBox="0 0 24 24"><path d="M23 12s0-3.4-.4-5a2.6 2.6 0 0 0-1.8-1.8C19 4.7 12 4.7 12 4.7s-7 0-8.8.5A2.6 2.6 0 0 0 1.4 7C1 8.6 1 12 1 12s0 3.4.4 5a2.6 2.6 0 0 0 1.8 1.8c1.8.5 8.8.5 8.8.5s7 0 8.8-.5A2.6 2.6 0 0 0 22.6 17c.4-1.6.4-5 .4-5z" fill="#ff0000" stroke="none"/><path d="M9.8 15.3V8.7l5.7 3.3-5.7 3.3z" fill="#fff" stroke="none"/></svg></span>
     <span class="tool-tx"><b>YouTube</b><span>Busca y reproduce una referencia para todos</span></span>
   </button>
+  <button class="tool-item is-toggle" id="toolDaw">
+    <span class="tool-ic daw"><svg viewBox="0 0 24 24"><line x1="4" y1="10" x2="4" y2="14"/><line x1="8" y1="6" x2="8" y2="18"/><line x1="12" y1="9" x2="12" y2="15"/><line x1="16" y1="4" x2="16" y2="20"/><line x1="20" y1="8" x2="20" y2="16"/></svg></span>
+    <span class="tool-tx"><b>DAW</b><span id="toolDawSub">Transmite el audio de tu DAW a la sala</span></span>
+    <span class="tool-state" id="toolDawState">Off</span>
+  </button>
+</div>
+
+<!-- CONSOLA -->
+<div class="sheet" id="consoleSheet">
+  <div class="grabber"></div><button class="sheet-x" aria-label="Cerrar"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+  <h2>Consola</h2>
+  <div class="console-rack" id="consoleRack"></div>
+  <div class="console-empty" id="consoleEmpty">Aquí controlas, solo para tus oídos, el volumen de cada participante, del DAW y de YouTube. Aparecerán como canales cuando haya audio en la sala.</div>
 </div>
 
 <!-- PANEL YOUTUBE -->
