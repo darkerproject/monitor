@@ -8,7 +8,7 @@
   var dawOn=false,dawStream=null,silentTrack=null,dawMonitorEl=null,dawNodes=null;
   var dawMonitorTap=null,dawMonitorDst=null,dawMonitorEqNodes=[];
   var dawGain=parseFloat(localStorage.getItem("dawGain")||"1")||1;
-  var voiceTrack=null,dawSlotTrack=null,screenSlotTrack=null,blankVideoTrack=null,blankCamTrack=null,camSlotTrack=null,meScreenTile=null,meScreenVideo=null;
+  var voiceTrack=null,dawSlotTrack=null,screenSlotTrack=null,blankVideoTrack=null,blankCamTrack=null,camSlotTrack=null,meScreenTile=null,meScreenVideo=null,silentVoiceTrack=null;
   var meters=[],meterRAF=null;
   var peers={}; // id -> {dc, call, name, avatar, index, cam, screen, hasVideo, tile, video, audioEls:[]}
   var myName=localStorage.getItem("myName")||"";
@@ -65,6 +65,12 @@
     var dst=ensureCtx().createMediaStreamDestination();
     silentTrack=dst.stream.getAudioTracks()[0];
     return silentTrack;
+  }
+  function getSilentVoiceTrack(){
+    if(silentVoiceTrack&&silentVoiceTrack.readyState==="live")return silentVoiceTrack;
+    var dst=ensureCtx().createMediaStreamDestination();
+    silentVoiceTrack=dst.stream.getAudioTracks()[0];
+    return silentVoiceTrack;
   }
   function getBlankVideoTrack(){
     if(blankVideoTrack&&blankVideoTrack.readyState==="live")return blankVideoTrack;
@@ -521,7 +527,8 @@
     $("preCamVideo").srcObject=null;$("preCamWrap").classList.remove("show");
   }
   function applyInitialAV(){
-    if(voiceTrack)voiceTrack.enabled=micOn;
+    if(micOn){if(voiceTrack)voiceTrack.enabled=true;}
+    else releaseMic();
     if(localStream){
       if(camOn){camSlotTrack=localStream.getVideoTracks()[0]||camSlotTrack;}
       else{
@@ -785,10 +792,34 @@
 
   // ---------- mic / cam / pantalla ----------
   function notifyCam(){broadcast({type:"cam",on:camOn,screen:sharing});}
-  function toggleMic(){
-    micOn=!micOn;if(voiceTrack)voiceTrack.enabled=micOn;
+  function micUI(){
     $("micCtrl").classList.toggle("off",!micOn);
     $("micLbl").textContent=micOn?"Mic":"Silenc.";
+  }
+  function releaseMic(){
+    // Apagar de verdad: detener la pista física (libera el micrófono y ahorra batería)
+    var sv=getSilentVoiceTrack();
+    if(voiceTrack&&voiceTrack!==sv){
+      replaceAcross(voiceTrack,sv);
+      try{voiceTrack.stop();}catch(e){}
+      if(localStream){try{localStream.removeTrack(voiceTrack);}catch(e){}}
+    }
+    voiceTrack=sv;
+    registerMeter("meterMic",new MediaStream([sv]));
+  }
+  function toggleMic(){
+    if(micOn){
+      micOn=false;releaseMic();micUI();
+    }else{
+      navigator.mediaDevices.getUserMedia({audio:micConstraints()}).then(function(s){
+        var nt=s.getAudioTracks()[0];
+        replaceAcross(voiceTrack,nt);
+        if(localStream)localStream.addTrack(nt);
+        voiceTrack=nt;micOn=true;
+        registerMeter("meterMic",new MediaStream([nt]));
+        micUI();
+      }).catch(function(){toast("No se pudo reactivar el micrófono");});
+    }
   }
   function toggleCam(){
     if(camOn){
@@ -852,6 +883,7 @@
 
   // ---------- swaps ----------
   function reacquireMic(){
+    if(!micOn)return Promise.resolve(); // se aplicará al encender el micrófono (usa selMic)
     return navigator.mediaDevices.getUserMedia({audio:micConstraints()}).then(function(s){
       var nt=s.getAudioTracks()[0];
       replaceAcross(voiceTrack,nt);
