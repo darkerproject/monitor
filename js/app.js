@@ -1,7 +1,7 @@
 (function(){
   "use strict";
   // ---------- estado ----------
-  var peer=null,localStream=null,screenStream=null;
+  var peer=null,localStream=null,screenStream=null,hostPeerPending=false;
   var sharing=false,micOn=true,camOn=true,musicMode=false;
   var selMic="",selCam="",selSpk="",selDaw="";
   var audioCtx=null,role=null,hostId=null,myId=null;
@@ -535,19 +535,39 @@
   }
 
   // ---------- inicio ----------
+  // ICE: STUN públicos + TURN de Metered (relay cuando el P2P directo falla, p. ej. datos móviles)
+  var METERED_DOMAIN="darkermonitor.metered.live";
+  var METERED_KEY="DxyMsQCWr_4k2k9wPkB-dtoLrhm4-Guqq0DQkfM2bTrfE4dC";
+  var FALLBACK_ICE=[{urls:"stun:stun.l.google.com:19302"},{urls:"stun:stun1.l.google.com:19302"}];
+  var icePromise=null;
+  function getIceServers(){
+    if(icePromise)return icePromise;
+    icePromise=fetch("https://"+METERED_DOMAIN+"/api/v1/turn/credentials?apiKey="+METERED_KEY)
+      .then(function(r){if(!r.ok)throw 0;return r.json();})
+      .then(function(list){return (list&&list.length)?list:FALLBACK_ICE;})
+      .catch(function(){return FALLBACK_ICE;});
+    return icePromise;
+  }
+  function peerOpts(ice){return {debug:1,config:{iceServers:ice}};}
+
   function initHostPeer(){
-    if(peer)return;
-    peer=hostCustomId?new Peer(hostCustomId,{debug:1}):new Peer(undefined,{debug:1});
-    peer.on("open",function(id){
-      myId=id;hostId=id;
-      var url=location.origin+location.pathname+"#"+id+(hostRoomName?"&n="+encodeURIComponent(hostRoomName):"");
-      $("shareLink").value=url;$("shareLink2").value=url;
-    });
-    peer.on("connection",setupData);
-    peer.on("call",function(c){if(!peers[c.peer]||!localStream){try{c.close();}catch(e){}return;}c.answer(buildOutStream(),{sdpTransform:preferOpusHQ});setupCall(c);});
-    peer.on("error",function(e){
-      if(e.type==="unavailable-id"){toast("Esta sala ya está abierta en otra pestaña o dispositivo");return;}
-      toast("Error: "+e.type);
+    if(peer||hostPeerPending)return;
+    hostPeerPending=true;
+    getIceServers().then(function(ice){
+      hostPeerPending=false;
+      if(peer)return;
+      peer=hostCustomId?new Peer(hostCustomId,peerOpts(ice)):new Peer(undefined,peerOpts(ice));
+      peer.on("open",function(id){
+        myId=id;hostId=id;
+        var url=location.origin+location.pathname+"#"+id+(hostRoomName?"&n="+encodeURIComponent(hostRoomName):"");
+        $("shareLink").value=url;$("shareLink2").value=url;
+      });
+      peer.on("connection",setupData);
+      peer.on("call",function(c){if(!peers[c.peer]||!localStream){try{c.close();}catch(e){}return;}c.answer(buildOutStream(),{sdpTransform:preferOpusHQ});setupCall(c);});
+      peer.on("error",function(e){
+        if(e.type==="unavailable-id"){toast("Esta sala ya está abierta en otra pestaña o dispositivo");return;}
+        toast("Error: "+e.type);
+      });
     });
   }
   function startHost(){
@@ -568,18 +588,20 @@
       $("waitingCard").hidden=false;
       if(joinRoomName)$("waitSub").textContent='Solicitaste entrar a "'+joinRoomName+'". Mantén esta pestaña abierta.';
       refreshMyUI();
-      peer=new Peer(undefined,{debug:1});
-      peer.on("open",function(id){
-        myId=id;
-        var url=location.origin+location.pathname+"#"+hid;
-        $("shareLink").value=url;$("shareLink2").value=url;
-        var dc=peer.connect(hid);setupData(dc);
-      });
-      peer.on("connection",setupData);
-      peer.on("call",function(c){c.answer(buildOutStream(),{sdpTransform:preferOpusHQ});setupCall(c);});
-      peer.on("error",function(e){
-        if(e.type==="peer-unavailable"){$("waitTitle").textContent="No se encontró la sala";$("waitSub").textContent="El enlace puede haber expirado. Pide uno nuevo.";}
-        else toast("Error: "+e.type);
+      getIceServers().then(function(ice){
+        peer=new Peer(undefined,peerOpts(ice));
+        peer.on("open",function(id){
+          myId=id;
+          var url=location.origin+location.pathname+"#"+hid;
+          $("shareLink").value=url;$("shareLink2").value=url;
+          var dc=peer.connect(hid);setupData(dc);
+        });
+        peer.on("connection",setupData);
+        peer.on("call",function(c){c.answer(buildOutStream(),{sdpTransform:preferOpusHQ});setupCall(c);});
+        peer.on("error",function(e){
+          if(e.type==="peer-unavailable"){$("waitTitle").textContent="No se encontró la sala";$("waitSub").textContent="El enlace puede haber expirado. Pide uno nuevo.";}
+          else toast("Error: "+e.type);
+        });
       });
     }).catch(permsError);
   }
@@ -893,7 +915,7 @@
   function cancelPrejoin(){
     // aborta el flujo de entrada y libera lo reservado
     stopMicPreview();stopCamPreview();
-    if(pendingJoin==="host"&&peer){try{peer.destroy();}catch(e){}peer=null;role=null;hostCustomId=null;hostRoomName="";}
+    if(pendingJoin==="host"){hostPeerPending=false;if(peer){try{peer.destroy();}catch(e){}peer=null;}role=null;hostCustomId=null;hostRoomName="";}
     pendingJoin=null;
   }
   // ---------- YouTube (referencias sincronizadas) ----------
