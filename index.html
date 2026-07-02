@@ -325,6 +325,10 @@
     <span class="tool-tx"><b>DAW</b><span id="toolDawSub">Transmite el audio de tu DAW a la sala</span></span>
     <span class="tool-state" id="toolDawState">Off</span>
   </button>
+  <button class="tool-item" id="toolRef">
+    <span class="tool-ic ref"><svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></span>
+    <span class="tool-tx"><b>Referencia</b><span id="toolRefSub">Comparte un audio tuyo con la sala</span></span>
+  </button>
 </div>
 
 <!-- CONSOLA -->
@@ -349,6 +353,49 @@
   <div class="yt-video"><div id="ytFrame"></div>
     <div class="yt-vol"><span class="tv-ic"><svg viewBox="0 0 24 24"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg></span><input type="range" id="ytPanelVol" min="0" max="100" value="100"></div>
   </div>
+</div>
+
+<!-- REFERENCIA (audio propio compartido) -->
+<div id="refPanel">
+  <div class="ref-head">
+    <span class="ref-ic"><svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></span>
+    <b>Referencia</b>
+    <button class="ref-x" id="refClose" aria-label="Cerrar"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+  </div>
+
+  <div class="ref-player">
+    <div class="ref-title" id="refTrackTitle">Elige un audio de la lista</div>
+    <div class="ref-scrub">
+      <span id="refTimeCur">00:00</span>
+      <input type="range" id="refSeek" min="0" max="100" value="0" step="0.1">
+      <span id="refTimeDur">00:00</span>
+    </div>
+    <div class="ref-transport">
+      <button id="refPrev" aria-label="Anterior"><svg viewBox="0 0 24 24"><polygon points="19 20 9 12 19 4 19 20" fill="currentColor" stroke="none"/><line x1="5" y1="19" x2="5" y2="5"/></svg></button>
+      <button id="refPlayPause" class="ref-play" aria-label="Reproducir"><svg id="refPlayIc" viewBox="0 0 24 24"><polygon points="7 4 21 12 7 20 7 4" fill="currentColor" stroke="none"/></svg></button>
+      <button id="refNext" aria-label="Siguiente"><svg viewBox="0 0 24 24"><polygon points="5 4 15 12 5 20 5 4" fill="currentColor" stroke="none"/><line x1="19" y1="5" x2="19" y2="19"/></svg></button>
+    </div>
+    <div class="ref-vol"><span class="tv-ic"><svg viewBox="0 0 24 24"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg></span><input type="range" id="refPanelVol" min="0" max="100" value="100"></div>
+  </div>
+
+  <div class="ref-guest-hint">Solo el anfitrión reproduce</div>
+  <div class="ref-list" id="refList"></div>
+
+  <div class="ref-stage" id="refStage">
+    <span class="ref-stage-name" id="refStageName"></span>
+    <button id="refSendBtn">Enviar</button>
+  </div>
+
+  <div class="ref-drop" id="refDrop">
+    <input type="file" id="refFileInput" accept="audio/*" hidden>
+    <span class="ref-drop-tx">Arrastra un audio aquí o</span> <button id="refPickBtn">elige un archivo</button>
+  </div>
+</div>
+
+<!-- indicador compacto de Referencia (teléfono) -->
+<div id="refMini">
+  <span class="refm-ic"><svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></span>
+  <span class="refm-tx"><b id="refMiniName"></b><span id="refMiniState"></span></span>
 </div>
 
 <script src="js/app.js"></script>

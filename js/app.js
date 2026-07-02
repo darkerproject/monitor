@@ -8,7 +8,10 @@
   var dawOn=false,dawStream=null,silentTrack=null,dawMonitorEl=null,dawNodes=null;
   var dawMonitorTap=null,dawMonitorDst=null,dawMonitorEqNodes=[];
   var dawGain=parseFloat(localStorage.getItem("dawGain")||"1")||1;
-  var voiceTrack=null,dawSlotTrack=null,screenSlotTrack=null,blankVideoTrack=null,blankCamTrack=null,camSlotTrack=null,meScreenTile=null,meScreenVideo=null,silentVoiceTrack=null;
+  var voiceTrack=null,dawSlotTrack=null,screenSlotTrack=null,blankVideoTrack=null,blankCamTrack=null,camSlotTrack=null,meScreenTile=null,meScreenVideo=null,silentVoiceTrack=null,silentRefTrack=null;
+  // Referencia (audio propio compartido)
+  var refTracks=[],refActiveId=null,refPlaying=false,refSlotTrack=null;
+  var refListenVol=100,refListenMuted=false,refSyncTimer=null,refStagedFile=null,refSeekDragging=false;
   var meters=[],meterRAF=null;
   var peers={}; // id -> {dc, call, name, avatar, index, cam, screen, hasVideo, tile, video, audioEls:[]}
   var myName=localStorage.getItem("myName")||"";
@@ -72,6 +75,13 @@
     silentVoiceTrack=dst.stream.getAudioTracks()[0];
     return silentVoiceTrack;
   }
+  function getSilentRefTrack(){
+    // dedicado: el mismo track no puede ocupar dos slots del mismo MediaStream
+    if(silentRefTrack&&silentRefTrack.readyState==="live")return silentRefTrack;
+    var dst=ensureCtx().createMediaStreamDestination();
+    silentRefTrack=dst.stream.getAudioTracks()[0];
+    return silentRefTrack;
+  }
   function getBlankVideoTrack(){
     if(blankVideoTrack&&blankVideoTrack.readyState==="live")return blankVideoTrack;
     var c=document.createElement("canvas");c.width=2;c.height=2;
@@ -92,6 +102,8 @@
     if(voiceTrack)out.addTrack(voiceTrack);
     dawSlotTrack=(dawOn&&dawNodes)?dawNodes.dst.stream.getAudioTracks()[0]:getSilentTrack();
     out.addTrack(dawSlotTrack);
+    if(!refSlotTrack||refSlotTrack.readyState!=="live")refSlotTrack=getSilentRefTrack();
+    out.addTrack(refSlotTrack);
     var cam=(camOn&&camSlotTrack&&camSlotTrack.readyState==="live")?camSlotTrack:getBlankCamTrack();
     out.addTrack(cam);
     screenSlotTrack=(sharing&&screenStream)?screenStream.getVideoTracks()[0]:getBlankVideoTrack();
@@ -189,7 +201,7 @@
     } else {
       var p=ensurePeer(dc.peer);p.dc=dc;
     }
-    dc.on("open",function(){if(!pending[dc.peer])dc.send(myProfileMsg());});
+    dc.on("open",function(){if(!pending[dc.peer]){dc.send(myProfileMsg());sendMyRefState(dc);}});
     dc.on("data",function(msg){
       if(!msg||!msg.type)return;
       var req=pending[dc.peer];
@@ -220,6 +232,7 @@
       req.dc.send(myProfileMsg());
       var others=Object.keys(peers).filter(function(k){return k!==id&&peers[k].dc&&peers[k].dc.open;});
       req.dc.send({type:"welcome",peers:others,index:nextIndex++});
+      sendMyRefState(req.dc);
     }catch(e){}
     updateTile(p);updateRequestsUI();updatePeersUI();
   }
@@ -287,6 +300,8 @@
       });
     } else if(msg.type==="yt"){
       ytApplyRemote(msg);
+    } else if(msg.type==="ref"){
+      refApplyRemote(msg);
     } else if(msg.type==="rejected"&&role==="guest"){
       awaitingApproval=false;
       $("waitingCard").hidden=false;
@@ -340,11 +355,12 @@
       if(p.audioEls.some(function(a){return a.dataset.tid===t.id;}))return;
       var a=document.createElement("audio");
       a.autoplay=true;
-      a.dataset.tid=t.id;a.dataset.kind=idx===0?"voz":"daw";
+      a.dataset.tid=t.id;a.dataset.kind=idx===0?"voz":(idx===1?"daw":"ref");
       document.body.appendChild(a);
       p.audioEls.push(a);
       if(idx===0){a.srcObject=new MediaStream([t]);p.voiceAudio=a;applyVoiceListen(p);}
-      else{eqAttach(a,new MediaStream([t]));p.dawAudio=a;applyDawListen();}
+      else if(idx===1){eqAttach(a,new MediaStream([t]));p.dawAudio=a;applyDawListen();}
+      else{eqAttach(a,new MediaStream([t]));p.refAudio=a;applyRefListen();}
       applySink(a);
       a.play().catch(function(){
         var once=function(){document.querySelectorAll("audio").forEach(function(el){el.play().catch(function(){});});document.removeEventListener("click",once);};
@@ -361,6 +377,14 @@
     p.audioEls.forEach(function(a){eqDetach(a);try{a.srcObject=null;a.remove();}catch(e){}});
     if(p.tile)p.tile.remove();
     if(p.screenTile)p.screenTile.remove();
+    // Referencia: sus audios salen de la lista; si el activo era suyo, se detiene
+    var hadRef=refTracks.some(function(e){return e.ownerId===id;});
+    if(hadRef){
+      var actWasTheirs=(function(){var a=findRef(refActiveId);return a&&a.ownerId===id;})();
+      refTracks=refTracks.filter(function(e){return e.ownerId!==id;});
+      if(actWasTheirs){refActiveId=null;refPlaying=false;}
+      renderRefUI();refreshConsole();
+    }
     updatePeersUI();
     toast(displayName(p.name,p.index)+" salió");
   }
@@ -1097,6 +1121,238 @@
   }
   function ytInRoom(){return !!ytCurrentVideo;}
 
+  // ---------- Referencia (audio propio compartido) ----------
+  function isPhone(){return window.matchMedia&&window.matchMedia("(max-width:480px)").matches;}
+  function fmtTime(s){s=Math.max(0,Math.floor(s||0));var m=Math.floor(s/60),r=s%60;return (m<10?"0":"")+m+":"+(r<10?"0":"")+r;}
+  function findRef(id){for(var i=0;i<refTracks.length;i++)if(refTracks[i].id===id)return refTracks[i];return null;}
+  function refInRoom(){return refActiveId!=null;}
+
+  function applyRefListen(){
+    var v=refListenMuted?0:refListenVol/100;
+    Object.keys(peers).forEach(function(k){if(peers[k].refAudio)peers[k].refAudio.volume=v;});
+    var act=findRef(refActiveId);
+    if(act&&act.node&&act.node.monitorEl)act.node.monitorEl.volume=v;
+    var pv=$("refPanelVol");if(pv&&!refListenMuted)pv.value=refListenVol;
+  }
+
+  // --- subida ---
+  function addRefFile(file){
+    if(!file)return;
+    if(file.type&&file.type.indexOf("audio")!==0&&!/\.(mp3|wav|m4a|aac|flac|ogg|aiff?)$/i.test(file.name)){
+      toast("Ese archivo no parece ser un audio");return;
+    }
+    var url=URL.createObjectURL(file);
+    var el=document.createElement("audio");
+    el.preload="metadata";el.src=url;
+    var entry={id:myId+"-"+Date.now()+"-"+Math.floor(Math.random()*1e4),name:file.name,
+      ownerId:myId,ownerName:myName||"",duration:0,el:el,url:url,node:null};
+    el.addEventListener("loadedmetadata",function(){
+      entry.duration=el.duration||0;
+      refTracks.push(entry);
+      broadcast({type:"ref",action:"add",id:entry.id,name:entry.name,ownerId:entry.ownerId,ownerName:entry.ownerName,duration:entry.duration});
+      renderRefUI();refreshConsole();
+      // anfitrión en teléfono: elegir un archivo lo reproduce de una y cierra la hoja
+      if(role==="host"&&isPhone()){refControl("activate",{id:entry.id,ownerId:entry.ownerId});$("refPanel").classList.remove("show");}
+    });
+    el.addEventListener("error",function(){
+      URL.revokeObjectURL(url);
+      toast("No se pudo reproducir este archivo");
+    });
+    el.addEventListener("ended",function(){
+      if(refActiveId===entry.id){broadcast({type:"ref",action:"pause"});refApplyLocal({action:"pause"});}
+    });
+  }
+
+  // --- dueño: inyectar / silenciar su slot ---
+  function ownerActivate(entry){
+    ensureCtx();
+    if(!entry.node){
+      var src=audioCtx.createMediaElementSource(entry.el);
+      var dst=audioCtx.createMediaStreamDestination();
+      src.connect(dst);
+      var mon=document.createElement("audio");mon.autoplay=true;document.body.appendChild(mon);
+      eqAttach(mon,dst.stream);applySink(mon);
+      entry.node={src:src,dst:dst,monitorEl:mon};
+    }
+    var nt=entry.node.dst.stream.getAudioTracks()[0];
+    if(refSlotTrack!==nt){replaceAcross(refSlotTrack||getSilentRefTrack(),nt);refSlotTrack=nt;}
+    entry.el.currentTime=0;
+    entry.node.monitorEl.play().catch(function(){});
+    entry.el.play().catch(function(){
+      var once=function(){entry.el.play().catch(function(){});document.removeEventListener("click",once);};
+      document.addEventListener("click",once);
+      toast("Toca la pantalla para activar el audio");
+    });
+    applyRefListen();
+    startRefSync(entry);
+  }
+  function ownerDeactivate(){
+    refTracks.forEach(function(e){
+      if(e.ownerId===myId&&e.el&&!e.el.paused)e.el.pause();
+    });
+    var silent=getSilentRefTrack();
+    if(refSlotTrack&&refSlotTrack!==silent){replaceAcross(refSlotTrack,silent);refSlotTrack=silent;}
+    stopRefSync();
+  }
+  function startRefSync(entry){
+    stopRefSync();
+    refSyncTimer=setInterval(function(){
+      if(!entry.el)return;
+      broadcast({type:"ref",action:"progress",t:entry.el.currentTime,d:entry.duration});
+      if(role==="host")updateRefScrub(entry.el.currentTime,entry.duration);
+    },500);
+  }
+  function stopRefSync(){if(refSyncTimer){clearInterval(refSyncTimer);refSyncTimer=null;}}
+
+  // --- limpieza de un track ---
+  function cleanupRefEntry(entry){
+    if(entry.ownerId===myId){
+      if(entry.el){try{entry.el.pause();}catch(e){}}
+      if(entry.node&&entry.node.monitorEl){try{entry.node.monitorEl.pause();entry.node.monitorEl.remove();}catch(e){}}
+      if(entry.url){try{URL.revokeObjectURL(entry.url);}catch(e){}}
+    }
+  }
+
+  // --- control central: el host difunde y aplica localmente por el mismo camino ---
+  function refControl(action,extra){
+    var msg={type:"ref",action:action};
+    if(extra)Object.keys(extra).forEach(function(k){msg[k]=extra[k];});
+    broadcast(msg);
+    refApplyLocal(msg);
+  }
+  function refApplyLocal(msg){
+    var act;
+    if(msg.action==="activate"){
+      var prev=findRef(refActiveId);
+      if(prev&&prev.ownerId===myId&&msg.id!==prev.id)ownerDeactivate();
+      refActiveId=msg.id;refPlaying=true;
+      act=findRef(msg.id);
+      if(act&&act.ownerId===myId)ownerActivate(act);
+      renderRefUI();refreshConsole();
+    } else if(msg.action==="play"){
+      refPlaying=true;
+      act=findRef(refActiveId);
+      if(act&&act.ownerId===myId&&act.el)act.el.play().catch(function(){});
+      renderRefUI();
+    } else if(msg.action==="pause"){
+      refPlaying=false;
+      act=findRef(refActiveId);
+      if(act&&act.ownerId===myId&&act.el)act.el.pause();
+      renderRefUI();
+    } else if(msg.action==="seek"){
+      act=findRef(refActiveId);
+      if(act&&act.ownerId===myId&&act.el)act.el.currentTime=msg.t||0;
+    } else if(msg.action==="remove"){
+      var e=findRef(msg.id);
+      if(e){
+        cleanupRefEntry(e);
+        if(refActiveId===msg.id){
+          if(e.ownerId===myId)ownerDeactivate();
+          refActiveId=null;refPlaying=false;
+        }
+        refTracks=refTracks.filter(function(x){return x.id!==msg.id;});
+      }
+      renderRefUI();refreshConsole();
+    } else if(msg.action==="close"){
+      var a2=findRef(refActiveId);
+      if(a2&&a2.ownerId===myId)ownerDeactivate();
+      refActiveId=null;refPlaying=false;
+      $("refPanel").classList.remove("show");
+      renderRefUI();refreshConsole();
+    }
+  }
+  function refApplyRemote(msg){
+    if(msg.action==="add"){
+      if(findRef(msg.id))return;
+      refTracks.push({id:msg.id,name:msg.name||"Audio",ownerId:msg.ownerId,ownerName:msg.ownerName||"",duration:msg.duration||0,el:null,url:null,node:null});
+      renderRefUI();refreshConsole();
+      return;
+    }
+    if(msg.action==="progress"){
+      if(role==="host"){var act=findRef(refActiveId);if(!(act&&act.ownerId===myId))updateRefScrub(msg.t,msg.d);}
+      return;
+    }
+    // acciones de control: vienen del anfitrión (o remove del dueño); se aplican por el camino común
+    refApplyLocal(msg);
+  }
+  function sendMyRefState(dc){
+    try{
+      refTracks.forEach(function(e){
+        if(e.ownerId!==myId)return;
+        dc.send({type:"ref",action:"add",id:e.id,name:e.name,ownerId:e.ownerId,ownerName:e.ownerName,duration:e.duration});
+      });
+      if(role==="host"&&refActiveId){
+        var act=findRef(refActiveId);
+        if(act){
+          dc.send({type:"ref",action:"activate",id:act.id,ownerId:act.ownerId});
+          if(!refPlaying)dc.send({type:"ref",action:"pause"});
+        }
+      }
+    }catch(e){}
+  }
+
+  // --- UI ---
+  function updateRefScrub(t,d){
+    if(refSeekDragging)return;
+    var sk=$("refSeek");
+    if(d){sk.max=d;sk.value=t||0;}
+    $("refTimeCur").textContent=fmtTime(t);
+    $("refTimeDur").textContent=fmtTime(d);
+  }
+  function renderRefUI(){
+    var panel=$("refPanel");
+    panel.classList.toggle("is-guest",role!=="host");
+    var act=findRef(refActiveId);
+    // reproductor (host)
+    $("refTrackTitle").textContent=act?act.name:"Elige un audio de la lista";
+    $("refPlayIc").innerHTML=refPlaying
+      ? '<line x1="9" y1="5" x2="9" y2="19" stroke-width="3"/><line x1="15" y1="5" x2="15" y2="19" stroke-width="3"/>'
+      : '<polygon points="7 4 21 12 7 20 7 4" fill="currentColor" stroke="none"/>';
+    var idxA=act?refTracks.indexOf(act):-1;
+    $("refPrev").disabled=!(act&&idxA>0);
+    $("refNext").disabled=!(act&&idxA>-1&&idxA<refTracks.length-1);
+    $("refPlayPause").disabled=(refTracks.length===0);
+    if(!act)updateRefScrub(0,0);
+    // lista
+    var list=$("refList");list.innerHTML="";
+    if(refTracks.length===0){
+      var em=document.createElement("div");em.className="ref-list-empty";
+      em.textContent="Aún no hay audios. Cualquiera puede agregar uno abajo.";
+      list.appendChild(em);
+    }
+    refTracks.forEach(function(e){
+      var row=document.createElement("div");row.className="ref-row"+(e.id===refActiveId?" active":"");
+      var ic=document.createElement("span");ic.className="ref-row-ic";
+      ic.innerHTML='<svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>';
+      var tx=document.createElement("span");tx.className="ref-row-tx";
+      var b=document.createElement("b");b.textContent=e.name;b.title=e.name;
+      var s=document.createElement("span");
+      s.textContent=(e.ownerId===myId?"Tú":( e.ownerName||"Invitado"))+(e.duration?" · "+fmtTime(e.duration):"");
+      tx.appendChild(b);tx.appendChild(s);
+      row.appendChild(ic);row.appendChild(tx);
+      if(e.ownerId===myId||role==="host"){
+        var del=document.createElement("button");del.className="ref-row-del";del.setAttribute("aria-label","Quitar");
+        del.innerHTML='<svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+        del.addEventListener("click",function(ev){ev.stopPropagation();broadcast({type:"ref",action:"remove",id:e.id});refApplyLocal({action:"remove",id:e.id});});
+        row.appendChild(del);
+      }
+      if(role==="host"){
+        row.addEventListener("click",function(){
+          refControl("activate",{id:e.id,ownerId:e.ownerId});
+          if(isPhone())$("refPanel").classList.remove("show");
+        });
+      }
+      list.appendChild(row);
+    });
+    // indicador compacto (teléfono)
+    var mini=$("refMini");
+    if(act){
+      $("refMiniName").textContent=act.name;
+      $("refMiniState").textContent=refPlaying?"Reproduciendo":"En pausa";
+      mini.classList.add("show");
+    }else mini.classList.remove("show");
+  }
+
   var SPK_SVG='<svg viewBox="0 0 24 24"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>';
   var MUTE_SVG='<svg viewBox="0 0 24 24"><path d="M11 5 6 9H2v6h4l5 4V5z"/><line x1="22" y1="9" x2="16" y2="15"/><line x1="16" y1="9" x2="22" y2="15"/></svg>';
 
@@ -1172,6 +1428,17 @@
         value:dawListenVol,muted:dawListenMuted,
         onVol:function(v){dawListenVol=v;applyDawListen();},
         onMute:function(m){dawListenMuted=m;applyDawListen();}
+      }));
+      count++;
+    }
+
+    // Canal de Referencia (audio propio compartido)
+    if(refInRoom()){
+      rack.appendChild(makeChannel({
+        name:"Referencia",isSrc:true,
+        value:refListenVol,muted:refListenMuted,
+        onVol:function(v){refListenVol=v;applyRefListen();},
+        onMute:function(m){refListenMuted=m;applyRefListen();}
       }));
       count++;
     }
@@ -1349,6 +1616,105 @@
       handle.addEventListener("pointerup",function(){drag=false;handle.style.cursor="grab";});
       handle.addEventListener("pointercancel",function(){drag=false;handle.style.cursor="grab";});
     })();
+
+    // ---- Referencia: cableado ----
+    $("toolRef").addEventListener("click",function(){
+      closeSheets();
+      renderRefUI();
+      $("refPanel").classList.add("show");
+    });
+    $("refClose").addEventListener("click",function(){
+      if(role==="host")refControl("close");       // el anfitrión cierra para todos (la lista se conserva)
+      else $("refPanel").classList.remove("show"); // el invitado solo oculta su vista
+    });
+    // arrastre del panel (solo escritorio; en teléfono es hoja fija)
+    (function(){
+      var panel=$("refPanel"),handle=panel.querySelector(".ref-head");
+      var drag=false,sx,sy,ox,oy;
+      handle.addEventListener("pointerdown",function(e){
+        if(isPhone()||e.target.closest(".ref-x"))return;
+        drag=true;var r=panel.getBoundingClientRect();
+        panel.style.left=r.left+"px";panel.style.top=r.top+"px";panel.style.right="auto";panel.style.bottom="auto";
+        sx=e.clientX;sy=e.clientY;ox=r.left;oy=r.top;
+        try{handle.setPointerCapture(e.pointerId);}catch(err){}
+        handle.style.cursor="grabbing";
+      });
+      handle.addEventListener("pointermove",function(e){
+        if(!drag)return;
+        var nx=ox+(e.clientX-sx),ny=oy+(e.clientY-sy);
+        nx=Math.max(0,Math.min(nx,window.innerWidth-panel.offsetWidth));
+        ny=Math.max(0,Math.min(ny,window.innerHeight-panel.offsetHeight));
+        panel.style.left=nx+"px";panel.style.top=ny+"px";
+      });
+      handle.addEventListener("pointerup",function(){drag=false;handle.style.cursor="grab";});
+      handle.addEventListener("pointercancel",function(){drag=false;handle.style.cursor="grab";});
+    })();
+    // subida: selector de archivo
+    $("refPickBtn").addEventListener("click",function(){$("refFileInput").click();});
+    $("refFileInput").addEventListener("change",function(){
+      var f=this.files&&this.files[0];this.value="";
+      if(!f)return;
+      if(role!=="host"&&isPhone()){
+        // invitado en teléfono: adjunta y confirma con Enviar
+        refStagedFile=f;
+        $("refStageName").textContent=f.name;
+        $("refStage").classList.add("show");
+      }else{
+        addRefFile(f);
+      }
+    });
+    $("refSendBtn").addEventListener("click",function(){
+      if(!refStagedFile)return;
+      addRefFile(refStagedFile);
+      refStagedFile=null;
+      $("refStage").classList.remove("show");
+      $("refPanel").classList.remove("show");
+      toast("Audio enviado a la lista");
+    });
+    // subida: arrastrar y soltar (escritorio)
+    (function(){
+      var drop=$("refDrop"),panel=$("refPanel");
+      ["dragover","dragenter"].forEach(function(ev){
+        panel.addEventListener(ev,function(e){e.preventDefault();drop.classList.add("over");});
+      });
+      ["dragleave","drop"].forEach(function(ev){
+        panel.addEventListener(ev,function(e){e.preventDefault();drop.classList.remove("over");});
+      });
+      panel.addEventListener("drop",function(e){
+        var f=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0];
+        if(f)addRefFile(f);
+      });
+    })();
+    // transporte (solo anfitrión; los botones no existen visualmente para invitados)
+    $("refPlayPause").addEventListener("click",function(){
+      if(role!=="host")return;
+      if(!refActiveId){
+        if(refTracks.length)refControl("activate",{id:refTracks[0].id,ownerId:refTracks[0].ownerId});
+        return;
+      }
+      refControl(refPlaying?"pause":"play");
+    });
+    $("refPrev").addEventListener("click",function(){
+      if(role!=="host")return;
+      var act=findRef(refActiveId);if(!act)return;
+      var i=refTracks.indexOf(act);
+      if(i>0)refControl("activate",{id:refTracks[i-1].id,ownerId:refTracks[i-1].ownerId});
+    });
+    $("refNext").addEventListener("click",function(){
+      if(role!=="host")return;
+      var act=findRef(refActiveId);if(!act)return;
+      var i=refTracks.indexOf(act);
+      if(i>-1&&i<refTracks.length-1)refControl("activate",{id:refTracks[i+1].id,ownerId:refTracks[i+1].ownerId});
+    });
+    $("refSeek").addEventListener("pointerdown",function(){refSeekDragging=true;});
+    $("refSeek").addEventListener("pointerup",function(){refSeekDragging=false;});
+    $("refSeek").addEventListener("pointercancel",function(){refSeekDragging=false;});
+    $("refSeek").addEventListener("input",function(){$("refTimeCur").textContent=fmtTime(+this.value);});
+    $("refSeek").addEventListener("change",function(){
+      refSeekDragging=false;
+      if(role==="host"&&refActiveId)refControl("seek",{t:+this.value});
+    });
+    $("refPanelVol").addEventListener("input",function(){refListenVol=+this.value;refListenMuted=false;applyRefListen();refreshConsole();});
     $("ytQuery").addEventListener("input",function(){
       var v=this.value;if(ytSearchTimer)clearTimeout(ytSearchTimer);
       ytSearchTimer=setTimeout(function(){ytSearch(v);},350);

@@ -382,7 +382,8 @@
     /* iOS hace auto-zoom si el campo tiene letra <16px; con 16px no salta en ningun navegador movil */
     .invite input, .linkrow input, .name-input, .field select{font-size:16px}
     .monitor-card{display:none}
-    #screenCtrl,#toolsCtrl{display:none}
+    #screenCtrl{display:none}
+    #toolDaw{display:none} /* no hay captura de DAW en navegadores móviles */
     #dawField{display:none}
     /* en teléfono, Ajustes ocupa todo el alto, entra desde la derecha y deja el header visible */
     .scrim{top:calc(56px + env(safe-area-inset-top))}
@@ -428,7 +429,8 @@
   }
 
   /* ---------- Herramientas / YouTube ---------- */
-  body:not(.role-host) #toolsCtrl{display:none}
+  /* Tools es visible para todos; las filas de anfitrión (YouTube, DAW) se ocultan a invitados */
+  body:not(.role-host) #toolYouTube,body:not(.role-host) #toolDaw{display:none}
   .tool-item{display:flex; align-items:center; gap:14px; width:100%; text-align:left; background:var(--fill);
     border:none; border-radius:14px; padding:14px 16px; cursor:pointer; color:var(--text); margin-bottom:10px}
   .tool-item:last-child{margin-bottom:0}
@@ -509,6 +511,91 @@
 
   @media (max-width:480px){
     #ytPanel{right:10px; left:10px; bottom:82px; width:auto; max-width:none}
+  }
+
+  /* ---------- Referencia (audio propio compartido) ---------- */
+  #refPanel{position:fixed; right:18px; bottom:96px; z-index:60; width:380px; max-width:calc(100vw - 24px);
+    background:var(--surface); border:1px solid var(--line); border-radius:18px; overflow:hidden;
+    box-shadow:0 18px 50px rgba(0,0,0,.4); display:none; flex-direction:column; max-height:min(560px,calc(100vh - 140px))}
+  #refPanel.show{display:flex}
+  .ref-head{display:flex; align-items:center; gap:9px; padding:12px 14px; border-bottom:1px solid var(--line); cursor:grab; flex:0 0 auto}
+  .ref-ic{display:grid; place-items:center}
+  .ref-ic svg,.refm-ic svg{width:22px; height:22px; stroke:var(--text); stroke-width:1.9; fill:none; stroke-linecap:round; stroke-linejoin:round}
+  .ref-head b{font-size:15px; font-weight:700; flex:1}
+  .ref-x{width:30px; height:30px; border-radius:50%; background:var(--fill); display:grid; place-items:center; border:none; cursor:pointer}
+  .ref-x svg{width:16px; height:16px; stroke:var(--text); stroke-width:2; fill:none; stroke-linecap:round}
+
+  .ref-player{padding:14px 16px 12px; border-bottom:1px solid var(--line); flex:0 0 auto}
+  #refPanel.is-guest .ref-player{display:none}
+  .ref-title{font-size:14px; font-weight:600; text-align:center; margin-bottom:10px;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .ref-scrub{display:flex; align-items:center; gap:9px}
+  .ref-scrub span{font-size:11.5px; color:var(--text-2); font-variant-numeric:tabular-nums; flex:0 0 auto}
+  #refSeek{flex:1; accent-color:var(--blue)}
+  .ref-transport{display:flex; align-items:center; justify-content:center; gap:22px; margin:10px 0 4px}
+  .ref-transport button{width:38px; height:38px; border-radius:50%; border:none; background:transparent;
+    display:grid; place-items:center; cursor:pointer; color:var(--text)}
+  .ref-transport button:hover{background:var(--fill)}
+  .ref-transport button:disabled{opacity:.35; cursor:default}
+  .ref-transport button:disabled:hover{background:transparent}
+  .ref-transport svg{width:20px; height:20px; stroke:currentColor; stroke-width:2; stroke-linecap:round}
+  .ref-transport .ref-play{width:46px; height:46px; background:var(--fill)}
+  .ref-transport .ref-play:hover{background:var(--line)}
+  .ref-transport .ref-play svg{width:22px; height:22px}
+  .ref-vol{display:flex; align-items:center; gap:8px; margin-top:8px}
+  .ref-vol .tv-ic svg{width:16px; height:16px; stroke:var(--text-2); fill:none; stroke-width:1.8; stroke-linecap:round}
+  #refPanelVol{flex:1; accent-color:var(--blue)}
+
+  .ref-guest-hint{display:none; font-size:12px; color:var(--text-2); padding:10px 16px 0}
+  #refPanel.is-guest .ref-guest-hint{display:block}
+
+  .ref-list{overflow-y:auto; overscroll-behavior:contain; padding:8px; display:flex; flex-direction:column; gap:4px; flex:1 1 auto; min-height:0}
+  .ref-row{display:flex; align-items:center; gap:10px; border-radius:10px; padding:9px 10px; cursor:pointer;
+    border:1px solid transparent}
+  .ref-row:hover{background:var(--fill)}
+  #refPanel.is-guest .ref-row{cursor:default}
+  .ref-row.active{background:rgba(0,87,255,.12); border-color:var(--blue)}
+  .ref-row-ic{flex:0 0 auto; display:grid; place-items:center; width:30px; height:30px; border-radius:8px; background:var(--fill)}
+  .ref-row.active .ref-row-ic{background:var(--blue)}
+  .ref-row-ic svg{width:15px; height:15px; stroke:var(--text); stroke-width:1.9; fill:none; stroke-linecap:round; stroke-linejoin:round}
+  .ref-row.active .ref-row-ic svg{stroke:#fff}
+  .ref-row-tx{flex:1; min-width:0; display:flex; flex-direction:column; gap:1px}
+  .ref-row-tx b{font-size:13px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .ref-row-tx span{font-size:11.5px; color:var(--text-2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .ref-row-del{flex:0 0 auto; width:26px; height:26px; border-radius:50%; border:none; background:transparent;
+    display:grid; place-items:center; cursor:pointer; color:var(--text-2)}
+  .ref-row-del:hover{background:var(--fill); color:var(--danger)}
+  .ref-row-del svg{width:13px; height:13px; stroke:currentColor; stroke-width:2; fill:none; stroke-linecap:round}
+  .ref-list-empty{font-size:13px; color:var(--text-2); padding:10px 8px}
+
+  .ref-stage{display:none; align-items:center; gap:10px; padding:10px 16px; border-top:1px solid var(--line); flex:0 0 auto}
+  .ref-stage.show{display:flex}
+  .ref-stage-name{flex:1; min-width:0; font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  #refSendBtn{flex:0 0 auto; background:var(--blue); color:#fff; border:none; border-radius:10px; padding:9px 16px;
+    font-size:13.5px; font-weight:600; cursor:pointer; font-family:inherit}
+
+  .ref-drop{padding:12px 16px calc(14px + env(safe-area-inset-bottom)); border-top:1px solid var(--line);
+    font-size:13px; color:var(--text-2); flex:0 0 auto}
+  .ref-drop.over{background:rgba(0,87,255,.08)}
+  #refPickBtn{background:none; border:none; color:var(--blue); font-size:13px; font-weight:600; cursor:pointer; padding:0; font-family:inherit}
+
+  /* indicador compacto (solo teléfono) */
+  #refMini{display:none; position:fixed; top:calc(64px + env(safe-area-inset-top)); left:50%; transform:translateX(-50%);
+    z-index:55; align-items:center; gap:9px; background:var(--glass); border:1px solid var(--glass-edge);
+    backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+    border-radius:22px; padding:8px 15px; max-width:calc(100vw - 32px)}
+  .refm-tx{display:flex; flex-direction:column; min-width:0}
+  .refm-tx b{font-size:12.5px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .refm-tx span{font-size:10.5px; color:var(--text-2)}
+
+  @media (max-width:480px){
+    /* el panel se presenta como hoja de altura completa, igual que Ajustes */
+    #refPanel{left:0; right:0; bottom:0; top:calc(56px + env(safe-area-inset-top));
+      width:auto; max-width:none; max-height:none; border-radius:0; border:none; z-index:90}
+    .ref-head{cursor:default}
+    .ref-drop-tx{display:none} /* en teléfono no hay drag&drop: solo el botón */
+    #refPanel.is-guest .ref-list,#refPanel.is-guest .ref-guest-hint{display:none} /* invitado móvil: solo subir */
+    #refMini.show{display:flex}
   }
 
   /* ---------- Volumen por ventana ---------- */
