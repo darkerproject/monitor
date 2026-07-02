@@ -531,7 +531,14 @@
     overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
   .ref-scrub{display:flex; align-items:center; gap:9px}
   .ref-scrub span{font-size:11.5px; color:var(--text-2); font-variant-numeric:tabular-nums; flex:0 0 auto}
-  #refSeek{flex:1; accent-color:var(--blue)}
+  /* timeline: línea gris fina, sin relleno */
+  #refSeek{flex:1; -webkit-appearance:none; appearance:none; background:transparent; height:18px; margin:0; cursor:pointer}
+  #refSeek::-webkit-slider-runnable-track{height:2px; background:var(--line); border-radius:2px}
+  #refSeek::-webkit-slider-thumb{-webkit-appearance:none; appearance:none; width:11px; height:11px; border-radius:50%;
+    background:var(--text); border:none; margin-top:-4.5px}
+  #refSeek::-moz-range-track{height:2px; background:var(--line); border-radius:2px}
+  #refSeek::-moz-range-thumb{width:11px; height:11px; border-radius:50%; background:var(--text); border:none}
+  #refSeek::-moz-range-progress{background:var(--line); height:2px}
   .ref-transport{display:flex; align-items:center; justify-content:center; gap:22px; margin:10px 0 4px}
   .ref-transport button{width:38px; height:38px; border-radius:50%; border:none; background:transparent;
     display:grid; place-items:center; cursor:pointer; color:var(--text)}
@@ -544,7 +551,13 @@
   .ref-transport .ref-play svg{width:22px; height:22px}
   .ref-vol{display:flex; align-items:center; gap:8px; margin-top:8px}
   .ref-vol .tv-ic svg{width:16px; height:16px; stroke:var(--text-2); fill:none; stroke-width:1.8; stroke-linecap:round}
-  #refPanelVol{flex:1; accent-color:var(--blue)}
+  #refPanelVol{flex:1; -webkit-appearance:none; appearance:none; background:transparent; height:16px; margin:0; cursor:pointer}
+  #refPanelVol::-webkit-slider-runnable-track{height:3px; background:var(--control-fill); border-radius:3px}
+  #refPanelVol::-webkit-slider-thumb{-webkit-appearance:none; appearance:none; width:13px; height:13px; border-radius:50%;
+    background:var(--blue); border:none; margin-top:-5px}
+  #refPanelVol::-moz-range-track{height:3px; background:var(--control-fill); border-radius:3px}
+  #refPanelVol::-moz-range-thumb{width:13px; height:13px; border-radius:50%; background:var(--blue); border:none}
+  #refPanelVol::-moz-range-progress{background:var(--blue); height:3px; border-radius:3px}
 
   .ref-guest-hint{display:none; font-size:12px; color:var(--text-2); padding:10px 16px 0}
   #refPanel.is-guest .ref-guest-hint{display:block}

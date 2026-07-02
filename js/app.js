@@ -1323,7 +1323,7 @@
     refTracks.forEach(function(e){
       var row=document.createElement("div");row.className="ref-row"+(e.id===refActiveId?" active":"");
       var ic=document.createElement("span");ic.className="ref-row-ic";
-      ic.innerHTML='<svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>';
+      ic.innerHTML='<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.2"/><polygon points="10 8.2 16 12 10 15.8" fill="currentColor" stroke="none"/></svg>';
       var tx=document.createElement("span");tx.className="ref-row-tx";
       var b=document.createElement("b");b.textContent=e.name;b.title=e.name;
       var s=document.createElement("span");
@@ -1435,7 +1435,7 @@
     // Canal de Referencia (audio propio compartido)
     if(refInRoom()){
       rack.appendChild(makeChannel({
-        name:"Referencia",isSrc:true,
+        name:"Audio Player",isSrc:true,
         value:refListenVol,muted:refListenMuted,
         onVol:function(v){refListenVol=v;applyRefListen();},
         onMute:function(m){refListenMuted=m;applyRefListen();}
