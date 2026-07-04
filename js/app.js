@@ -567,14 +567,13 @@
   }
 
   // ---------- inicio ----------
-  // ICE: STUN públicos + TURN de Metered (relay cuando el P2P directo falla, p. ej. datos móviles)
-  var METERED_DOMAIN="darkermonitor.metered.live";
-  var METERED_KEY="DxyMsQCWr_4k2k9wPkB-dtoLrhm4-Guqq0DQkfM2bTrfE4dC";
+  // ICE: STUN públicos + TURN vía nuestra función serverless (/api/turn),
+  // que consulta a Metered con la Secret Key oculta del lado del servidor.
   var FALLBACK_ICE=[{urls:"stun:stun.l.google.com:19302"},{urls:"stun:stun1.l.google.com:19302"}];
   var icePromise=null;
   function getIceServers(){
     if(icePromise)return icePromise;
-    icePromise=fetch("https://"+METERED_DOMAIN+"/api/v1/turn/credentials?apiKey="+METERED_KEY)
+    icePromise=fetch("/api/turn")
       .then(function(r){if(!r.ok)throw 0;return r.json();})
       .then(function(list){return (list&&list.length)?list:FALLBACK_ICE;})
       .catch(function(){return FALLBACK_ICE;});
