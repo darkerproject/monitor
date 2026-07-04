@@ -567,18 +567,17 @@
   }
 
   // ---------- inicio ----------
-  // ICE: STUN públicos + TURN vía nuestra función serverless (/api/turn),
-  // que consulta a Metered con la Secret Key oculta del lado del servidor.
-  var FALLBACK_ICE=[{urls:"stun:stun.l.google.com:19302"},{urls:"stun:stun1.l.google.com:19302"}];
-  var icePromise=null;
-  function getIceServers(){
-    if(icePromise)return icePromise;
-    icePromise=fetch("/api/turn")
-      .then(function(r){if(!r.ok)throw 0;return r.json();})
-      .then(function(list){return (list&&list.length)?list:FALLBACK_ICE;})
-      .catch(function(){return FALLBACK_ICE;});
-    return icePromise;
-  }
+  // ICE: STUN + TURN (relay cuando el P2P directo falla, p. ej. datos móviles o NAT estricto).
+  // Credenciales de Metered incrustadas; el relay solo se usa si el camino directo no pasa.
+  var ICE_SERVERS=[
+    {urls:"stun:stun.relay.metered.ca:80"},
+    {urls:"stun:stun.l.google.com:19302"},
+    {urls:"turn:global.relay.metered.ca:80",username:"2fd81dd18959c5ff03e40ae3",credential:"RWM1ZpykQ7t0Lnit"},
+    {urls:"turn:global.relay.metered.ca:80?transport=tcp",username:"2fd81dd18959c5ff03e40ae3",credential:"RWM1ZpykQ7t0Lnit"},
+    {urls:"turn:global.relay.metered.ca:443",username:"2fd81dd18959c5ff03e40ae3",credential:"RWM1ZpykQ7t0Lnit"},
+    {urls:"turns:global.relay.metered.ca:443?transport=tcp",username:"2fd81dd18959c5ff03e40ae3",credential:"RWM1ZpykQ7t0Lnit"}
+  ];
+  function getIceServers(){return Promise.resolve(ICE_SERVERS);}
   function peerOpts(ice){return {debug:1,config:{iceServers:ice}};}
 
   function initHostPeer(){
