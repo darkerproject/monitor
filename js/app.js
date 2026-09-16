@@ -590,14 +590,17 @@
       peer.on("open",function(id){
         myId=id;hostId=id;
         var url=location.origin+location.pathname+"#"+id+(hostRoomName?"&n="+encodeURIComponent(hostRoomName):"");
-        $("shareLink").value=url;$("shareLink2").value=url;
+        $("shareLink").value=url;$("shareLink2").value=url;$("shareLink3").value=url;
+        reconnectTries=0;startBrokerWatch();
       });
       peer.on("connection",setupData);
       peer.on("call",function(c){if(!peers[c.peer]||!localStream){try{c.close();}catch(e){}return;}c.answer(buildOutStream(),{sdpTransform:preferOpusHQ});setupCall(c);});
       peer.on("error",function(e){
         if(e.type==="unavailable-id"){toast("Esta sala ya está abierta en otra pestaña o dispositivo");return;}
+        if(e.type==="network"){scheduleReconnect();return;}
         toast("Error: "+e.type);
       });
+      peer.on("disconnected",function(){scheduleReconnect();});
     });
   }
   function startHost(){
@@ -623,15 +626,18 @@
         peer.on("open",function(id){
           myId=id;
           var url=location.origin+location.pathname+"#"+hid;
-          $("shareLink").value=url;$("shareLink2").value=url;
+          $("shareLink").value=url;$("shareLink2").value=url;$("shareLink3").value=url;
           var dc=peer.connect(hid);setupData(dc);
+          reconnectTries=0;startBrokerWatch();
         });
         peer.on("connection",setupData);
         peer.on("call",function(c){c.answer(buildOutStream(),{sdpTransform:preferOpusHQ});setupCall(c);});
         peer.on("error",function(e){
           if(e.type==="peer-unavailable"){$("waitTitle").textContent="No se encontró la sala";$("waitSub").textContent="El enlace puede haber expirado. Pide uno nuevo.";}
+          else if(e.type==="network"){scheduleReconnect();}
           else toast("Error: "+e.type);
         });
+        peer.on("disconnected",function(){scheduleReconnect();});
       });
     }).catch(permsError);
   }
@@ -1457,6 +1463,38 @@
   }
   function refreshConsole(){if($("consoleSheet").classList.contains("show"))renderConsole();}
 
+  // ---------- Reconexión al broker (evita que la sala "expire" mientras sigues dentro) ----------
+  var reconnectTimer=null,reconnectTries=0,brokerWatch=null;
+  function scheduleReconnect(){
+    if(!peer||peer.destroyed)return;
+    if(reconnectTimer)return;
+    var delay=Math.min(1000*Math.pow(1.6,reconnectTries),15000);
+    reconnectTries++;
+    reconnectTimer=setTimeout(function(){
+      reconnectTimer=null;
+      if(!peer||peer.destroyed)return;
+      if(!peer.disconnected){reconnectTries=0;return;}
+      try{peer.reconnect();}catch(e){}
+      setTimeout(function(){
+        if(peer&&!peer.destroyed&&peer.disconnected)scheduleReconnect();
+        else reconnectTries=0;
+      },2500);
+    },delay);
+  }
+  function startBrokerWatch(){
+    if(brokerWatch)clearInterval(brokerWatch);
+    brokerWatch=setInterval(function(){
+      if(peer&&!peer.destroyed&&peer.disconnected)scheduleReconnect();
+    },8000);
+    // al volver de segundo plano o recuperar red, revisar de inmediato
+    document.addEventListener("visibilitychange",function(){
+      if(!document.hidden&&peer&&!peer.destroyed&&peer.disconnected)scheduleReconnect();
+    });
+    window.addEventListener("online",function(){
+      if(peer&&!peer.destroyed&&peer.disconnected)scheduleReconnect();
+    });
+  }
+
   function openSheet(id){
     sheetIds.forEach(function(s){$(s).classList.toggle("show",s===id);});
     $("scrim").classList.add("show");
@@ -1584,6 +1622,7 @@
     };
     $("copyBtn").addEventListener("click",function(){copyFn("shareLink","copyBtn");});
     $("copyBtn2").addEventListener("click",function(){copyFn("shareLink2","copyBtn2");});
+    $("copyBtn3").addEventListener("click",function(){copyFn("shareLink3","copyBtn3");});
 
     $("micCtrl").addEventListener("click",toggleMic);
     $("screenCtrl").addEventListener("click",toggleScreen);

@@ -638,3 +638,13 @@
   .yt-vol input::-webkit-slider-thumb{-webkit-appearance:none; width:15px; height:15px; border-radius:50%; background:var(--blue); cursor:pointer; box-shadow:0 1px 3px rgba(0,0,0,.35)}
   .yt-vol input::-moz-range-thumb{width:15px; height:15px; border:none; border-radius:50%; background:var(--blue); cursor:pointer}
 
+
+  /* Enlace de la sala dentro de Personas (solo anfitrión) */
+  body:not(.role-host) #peopleInvite{display:none}
+  .invite-inline{margin-bottom:18px; padding-bottom:18px; border-bottom:1px solid var(--line)}
+  .invite-inline label{display:block; font-size:13px; font-weight:600; margin-bottom:8px; color:var(--text)}
+  .invite-row{display:flex; gap:8px; align-items:center}
+  .invite-row input{flex:1; min-width:0; background:var(--control-fill); border:1px solid var(--line); color:var(--text);
+    border-radius:10px; padding:10px 12px; font-size:13px; font-family:inherit}
+  .invite-row .copy{flex-shrink:0; background:var(--blue); color:#fff; border:none; border-radius:10px;
+    padding:10px 16px; font-size:13px; font-weight:600; cursor:pointer; font-family:inherit}
