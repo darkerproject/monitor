@@ -648,3 +648,13 @@
     border-radius:10px; padding:10px 12px; font-size:13px; font-family:inherit}
   .invite-row .copy{flex-shrink:0; background:var(--blue); color:#fff; border:none; border-radius:10px;
     padding:10px 16px; font-size:13px; font-weight:600; cursor:pointer; font-family:inherit}
+
+  /* Corte de conexión: la ventana queda en "Reconectando…" en vez de desaparecer */
+  .tile.reconnecting video{opacity:.3}
+  .tile.reconnecting::after{content:"Reconectando…"; position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); z-index:7;
+    font-size:13px; font-weight:600; color:#fff; background:rgba(0,0,0,.6); padding:7px 14px; border-radius:16px;
+    backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); white-space:nowrap; pointer-events:none}
+  .waiting.terminal .wc-dot{display:none}
+  .wc-retry{margin-top:20px; font-size:14px; font-weight:600; color:#fff; background:var(--blue); border:none;
+    border-radius:999px; padding:11px 22px; cursor:pointer; font-family:inherit}
+  .wc-retry[hidden]{display:none}

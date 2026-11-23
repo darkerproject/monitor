@@ -21,7 +21,10 @@
   var awaitingApproval=false;
   var hostCustomId=null,hostRoomName="",joinRoomName="",preSaveOn=false;
   var preMicOn=true,preCamOn=true,pendingJoin=null;
-  var nextIndex=2;  // solo lo usa el host
+  var admitted={};  // (solo host) id -> {index, rk, goneAt}: quién ya fue aceptado en esta sesión
+  var leaving=false;
+  var myRejoinKey=""; // (invitado) llave que da el anfitrión para volver a entrar sin sala de espera
+  var DROP_TICK_MS=2500,DROP_GRACE_TICKS=3,DROP_PEER_TICKS=12,DROP_HOST_TICKS=120,RESERVE_MS=600000;
   var $=function(id){return document.getElementById(id);};
 
   // ---------- tema ----------
@@ -196,18 +199,31 @@
   function setupData(dc){
     var isApplicant=(role==="host"&&!peers[dc.peer]);
     if(isApplicant){
-      pending[dc.peer]={dc:dc,name:"",avatar:"",notified:false};
+      pending[dc.peer]={dc:dc,name:"",avatar:"",notified:false,auto:!!admitted[dc.peer]};
       updateRequestsUI();
     } else {
-      var p=ensurePeer(dc.peer);p.dc=dc;
+      var p=ensurePeer(dc.peer);var oldDc=p.dc;p.dc=dc;
+      if(oldDc&&oldDc!==dc){try{oldDc.close();}catch(e){}}
     }
-    dc.on("open",function(){if(!pending[dc.peer]){dc.send(myProfileMsg());sendMyRefState(dc);}});
+    dc.on("open",function(){
+      if(pending[dc.peer]){
+        // ya aceptado en esta sesión y vuelve con el mismo id: entra directo, con su mismo número
+        if(admitted[dc.peer]&&pending[dc.peer].dc===dc)acceptRequest(dc.peer);
+        return;
+      }
+      var pm=myProfileMsg();
+      if(role==="guest"&&dc.peer===hostId&&myRejoinKey)pm.rk=myRejoinKey; // la llave solo viaja al anfitrión
+      dc.send(pm);sendMyRefState(dc);
+      var kp=peers[dc.peer];if(kp&&peerHealthy(kp))clearDrop(kp);
+    });
     dc.on("data",function(msg){
       if(!msg||!msg.type)return;
       var req=pending[dc.peer];
       if(req){
         if(msg.type==="profile"){
           req.name=msg.name||"";req.avatar=msg.avatar||"";
+          var backId=msg.rk?findAdmittedByKey(msg.rk):null;
+          if(backId){readmitAs(dc.peer,backId);return;} // volvió a abrir el enlace: mismo número, sin sala de espera
           if(!req.notified){req.notified=true;toast((req.name||"Alguien")+" quiere entrar a la sala");}
           updateRequestsUI();
         }
@@ -216,9 +232,11 @@
       handleData(dc.peer,msg);
     });
     dc.on("close",function(){
-      if(pending[dc.peer]){delete pending[dc.peer];updateRequestsUI();return;}
+      if(pending[dc.peer]){if(pending[dc.peer].dc===dc){delete pending[dc.peer];updateRequestsUI();}return;}
       if(role==="guest"&&awaitingApproval){awaitingApproval=false;$("waitTitle").textContent="La sala se cerró";$("waitSub").textContent="Intenta con un enlace nuevo.";return;}
-      removePeer(dc.peer);
+      var cp=peers[dc.peer];
+      if(!cp||cp.dc!==dc)return; // canal viejo, ya reemplazado
+      markDropped(dc.peer,true); // se cortó sin despedirse: se intenta recuperar antes de darlo por salido
     });
     dc.on("error",function(){});
   }
@@ -226,12 +244,16 @@
   function acceptRequest(id){
     var req=pending[id];if(!req)return;
     delete pending[id];
+    var rec=admitted[id],back=!!rec;
+    if(!rec)rec=admitted[id]={index:allocIndex(),rk:genId(),goneAt:0};
+    else if(indexTaken(rec.index,id))rec.index=allocIndex(); // su número ya lo tomó otra persona
+    rec.goneAt=0;rec.left=false;
     var p=ensurePeer(id);
-    p.dc=req.dc;p.name=req.name;p.avatar=req.avatar;
+    p.dc=req.dc;p.name=req.name;p.avatar=req.avatar;p.index=rec.index;
     try{
       req.dc.send(myProfileMsg());
       var others=Object.keys(peers).filter(function(k){return k!==id&&peers[k].dc&&peers[k].dc.open;});
-      req.dc.send({type:"welcome",peers:others,index:nextIndex++});
+      req.dc.send({type:"welcome",peers:others,index:rec.index,rk:rec.rk,rejoin:back});
       sendMyRefState(req.dc);
     }catch(e){}
     updateTile(p);updateRequestsUI();updatePeersUI();
@@ -245,14 +267,14 @@
   }
   function updateHostTopUI(){
     if(role!=="host")return;
-    var reqs=Object.keys(pending).length,members=Object.keys(peers).length;
+    var reqs=Object.keys(pending).filter(function(k){return !pending[k].auto;}).length,members=Object.keys(peers).length;
     // el boton de ingresos aparece con la primera solicitud y se queda para siempre
     $("reqCtrl").hidden=!(reqs>0||members>0);
     // el card del enlace se va en cuanto alguien toca la puerta
     document.body.classList.toggle("has-requests",reqs>0);
   }
   function updateRequestsUI(){
-    var ids=Object.keys(pending),n=ids.length;
+    var ids=Object.keys(pending).filter(function(k){return !pending[k].auto;}),n=ids.length;
     var c=$("reqCount");c.textContent=n;c.hidden=(n===0);
     $("reqEmpty").style.display=n?"none":"block";
     var list=$("reqList");list.innerHTML="";
@@ -274,6 +296,8 @@
   }
   function handleData(id,msg){
     if(!msg||!msg.type)return;
+    if(msg.type==="bye"){if(role==="host"&&admitted[id])admitted[id].left=true;if(peers[id])removePeer(id);return;} // salió a propósito
+    if(msg.type==="gone"){if(id===hostId&&msg.id&&peers[msg.id])removePeer(msg.id,true);return;} // el anfitrión avisa de una sesión reemplazada
     var p=ensurePeer(id);
     if(msg.type==="profile"){
       p.name=msg.name||"";p.avatar=msg.avatar||"";
@@ -286,7 +310,12 @@
     } else if(msg.type==="cam"){
       p.cam=!!msg.on;p.screen=!!msg.screen;if(p.screen)ensurePeerScreenTile(p);updateTile(p);updatePeersUI();
     } else if(msg.type==="welcome"&&role==="guest"){
-      if(!myIndex)myIndex=msg.index;
+      if(msg.index)myIndex=msg.index;
+      if(msg.rk){myRejoinKey=msg.rk;saveRejoinKey(hostId,msg.rk);}
+      if(!awaitingApproval){
+        // readmitido tras un corte, sin recargar: se rearma la llamada con el anfitrión
+        var hp=peers[hostId];if(hp)forceRedial(hp);
+      }
       if(awaitingApproval){
         awaitingApproval=false;
         $("waitingCard").hidden=true;
@@ -295,8 +324,10 @@
       }
       broadcast(myProfileMsg());refreshMyUI();
       (msg.peers||[]).forEach(function(pid){
-        if(pid===myId||peers[pid])return;
-        connectToPeer(pid); // el recién llegado inicia con cada existente
+        if(pid===myId)return;
+        var q=peers[pid];
+        if(!q)connectToPeer(pid); // el recién llegado inicia con cada existente
+        else if(msg.rejoin&&!peerHealthy(q)){markDropped(pid,true);forceRedial(q);} // quedó cortado mientras yo no estaba
       });
     } else if(msg.type==="yt"){
       ytApplyRemote(msg);
@@ -319,9 +350,14 @@
   }
   function setupCall(call){
     var p=ensurePeer(call.peer);
-    p.call=call;
-    call.on("stream",function(stream){attachPeerStream(p,stream);});
-    call.on("close",function(){removePeer(call.peer);});
+    var oldCall=p.call;p.call=call;
+    if(oldCall&&oldCall!==call){try{oldCall.close();}catch(e){}resetPeerMedia(p);} // re-llamada: se descarta el medio anterior
+    call.on("stream",function(stream){if(p.call!==call)return;attachPeerStream(p,stream);});
+    call.on("close",function(){
+      if(peers[call.peer]!==p||p.call!==call)return; // llamada vieja, ya reemplazada
+      markDropped(call.peer,true);
+    });
+    call.on("error",function(){});
     watchConn(call.peerConnection,call.peer);
   }
   function attachPeerStream(p,stream){
@@ -369,9 +405,11 @@
       });
     });
   }
-  function removePeer(id){
+  function removePeer(id,silent){
     var p=peers[id];if(!p)return;
     delete peers[id];
+    stopDropTimer(p);
+    if(role==="host"&&admitted[id])admitted[id].goneAt=Date.now(); // su número queda reservado un rato
     try{if(p.call)p.call.close();}catch(e){}
     try{if(p.dc)p.dc.close();}catch(e){}
     p.audioEls.forEach(function(a){eqDetach(a);try{a.srcObject=null;a.remove();}catch(e){}});
@@ -386,8 +424,109 @@
       renderRefUI();refreshConsole();
     }
     updatePeersUI();
-    toast(displayName(p.name,p.index)+" salió");
+    if(!silent)toast(displayName(p.name,p.index)+" salió");
   }
+
+  // ---------- Cortes de conexión: tolerar, recuperar y conservar el número ----------
+  function indexTaken(n,exceptId){
+    var now=Date.now();
+    if(Object.keys(peers).some(function(k){return k!==exceptId&&peers[k].index===n;}))return true;
+    return Object.keys(admitted).some(function(k){
+      var r=admitted[k];return k!==exceptId&&r.index===n&&(!r.goneAt||(!r.left&&now-r.goneAt<RESERVE_MS));
+    });
+  }
+  function allocIndex(){var n=2;while(indexTaken(n))n++;return n;} // el menor número libre (el anfitrión es 1)
+  function findAdmittedByKey(rk){
+    var ks=Object.keys(admitted);
+    for(var i=0;i<ks.length;i++)if(admitted[ks[i]].rk===rk)return ks[i];
+    return null;
+  }
+  function readmitAs(newId,oldId){
+    if(oldId!==newId){
+      var rec=admitted[oldId];delete admitted[oldId];
+      if(peers[oldId]){removePeer(oldId,true);broadcast({type:"gone",id:oldId});} // su sesión anterior quedó colgada
+      admitted[newId]=rec;
+    }
+    acceptRequest(newId);
+  }
+  function loadRejoinKey(hid){
+    try{var m=JSON.parse(localStorage.getItem("monRejoin")||"{}");return (m[hid]&&m[hid].rk)||"";}catch(e){return "";}
+  }
+  function saveRejoinKey(hid,rk){
+    try{
+      var m=JSON.parse(localStorage.getItem("monRejoin")||"{}");m[hid]={rk:rk,t:Date.now()};
+      Object.keys(m).sort(function(a,b){return m[b].t-m[a].t;}).slice(8).forEach(function(k){delete m[k];});
+      localStorage.setItem("monRejoin",JSON.stringify(m));
+    }catch(e){}
+  }
+  function peerHealthy(p){
+    var pc=p.call&&p.call.peerConnection;
+    return !!(pc&&pc.connectionState==="connected"&&p.dc&&p.dc.open);
+  }
+  // Quién vuelve a llamar tras un corte (uno solo, para que no se crucen dos llamadas):
+  // el invitado llama al anfitrión; entre invitados, el de id mayor.
+  function iAmDialer(pid){
+    if(role==="host")return false;
+    if(pid===hostId)return true;
+    return String(myId)>String(pid);
+  }
+  function setReconnecting(p,on){if(p.tile)p.tile.classList.toggle("reconnecting",!!on);}
+  function stopDropTimer(p){if(p.dropTimer){clearInterval(p.dropTimer);p.dropTimer=null;}}
+  function clearDrop(p){
+    stopDropTimer(p);
+    if(p.dropping){p.dropping=false;p.dropHard=false;p.dropTicks=0;p.lastDial=0;setReconnecting(p,false);}
+  }
+  function markDropped(pid,hard){
+    var p=peers[pid];if(!p||leaving)return;
+    if(!p.dropping){p.dropping=true;p.dropTicks=0;setReconnecting(p,true);}
+    if(hard)p.dropHard=true; // no se va a recuperar solo: hay que volver a llamar
+    if(!p.dropTimer)p.dropTimer=setInterval(function(){dropTick(pid);},DROP_TICK_MS);
+  }
+  function dropTick(pid){
+    var p=peers[pid];if(!p)return;
+    if(peerHealthy(p)){clearDrop(p);return;}
+    p.dropTicks++; // cuenta solo mientras la página está activa (un teléfono dormido no gasta el plazo)
+    var toHost=(role==="guest"&&pid===hostId);
+    if(p.dropTicks>(toHost?DROP_HOST_TICKS:DROP_PEER_TICKS)){
+      removePeer(pid);
+      if(toHost&&!Object.keys(peers).length)showLostRoom();
+      return;
+    }
+    if(iAmDialer(pid)&&(p.dropHard||p.dropTicks>=DROP_GRACE_TICKS))redial(p);
+  }
+  function redial(p){
+    if(!peer||peer.destroyed)return;
+    if(peer.disconnected){scheduleReconnect();return;} // primero hay que volver al servidor de señalización
+    var now=Date.now();
+    if(p.lastDial&&now-p.lastDial<9000)return;
+    p.lastDial=now;
+    try{
+      if(!p.dc||!p.dc.open){
+        var od=p.dc;p.dc=null;try{if(od)od.close();}catch(e){}
+        setupData(peer.connect(p.id));
+      }
+      var pc=p.call&&p.call.peerConnection;
+      if(!pc||pc.connectionState!=="connected"){
+        setupCall(peer.call(p.id,buildOutStream(),{sdpTransform:preferOpusHQ}));
+      }
+    }catch(e){}
+  }
+  function resetPeerMedia(p){
+    p.audioEls.forEach(function(a){eqDetach(a);try{a.srcObject=null;a.remove();}catch(e){}});
+    p.audioEls=[];p.voiceAudio=null;p.dawAudio=null;p.refAudio=null;
+    p.hasVideo=false;p.screenTrack=null;
+    if(p.screenTile){p.screenTile.remove();p.screenTile=null;p.screenVideo=null;}
+    try{if(p.video)p.video.srcObject=null;}catch(e){}
+    updateTile(p);updatePeersUI();
+  }
+  function showLostRoom(){
+    $("waitingCard").hidden=false;$("waitingCard").classList.add("terminal");
+    $("waitTitle").textContent="Se perdió la conexión con la sala";
+    $("waitSub").textContent="Vuelve a entrar con el mismo enlace: ya fuiste aceptado, no tendrás que esperar aprobación.";
+    if($("waitRetryBtn"))$("waitRetryBtn").hidden=false;
+  }
+  function sayBye(){try{broadcast({type:"bye"});}catch(e){}}
+  function forceRedial(p){p.lastDial=0;redial(p);}
   function broadcast(msg){
     Object.keys(peers).forEach(function(k){var dc=peers[k].dc;if(dc&&dc.open){try{dc.send(msg);}catch(e){}}});
   }
@@ -395,8 +534,11 @@
     if(!pc)return;
     pc.onconnectionstatechange=function(){
       var s=pc.connectionState;
-      if(s==="connected")updatePeersUI();
-      else if(s==="disconnected"||s==="failed")removePeer(pid);
+      var p=peers[pid];
+      if(!p||!p.call||p.call.peerConnection!==pc)return; // conexión vieja, ya reemplazada
+      if(s==="connected"){if(peerHealthy(p))clearDrop(p);updatePeersUI();}
+      else if(s==="disconnected")markDropped(pid,false); // suele recuperarse solo
+      else if(s==="failed")markDropped(pid,true);
     };
     setTimeout(function(){try{
       pc.getSenders().forEach(function(s){
@@ -615,6 +757,7 @@
   }
   function joinGuest(hid){
     role="guest";hostId=hid;document.body.classList.add("role-guest");
+    myRejoinKey=loadRejoinKey(hid);
     ensureCtx();
     getMedia().then(function(){
       awaitingApproval=true;
@@ -934,23 +1077,27 @@
     });
   }
   function hangUp(){
-    Object.keys(peers).forEach(function(k){try{peers[k].call&&peers[k].call.close();peers[k].dc&&peers[k].dc.close();}catch(e){}});
-    Object.keys(pending).forEach(function(k){try{pending[k].dc.close();}catch(e){}});
-    if(peer){try{peer.destroy();}catch(e){}}
-    if(localStream)localStream.getTracks().forEach(function(t){t.stop();});
-    if(screenStream)screenStream.getTracks().forEach(function(t){t.stop();});
-    if(dawStream)dawStream.getTracks().forEach(function(t){t.stop();});
-    if(meterRAF)cancelAnimationFrame(meterRAF);
+    if(leaving)return;leaving=true;
+    sayBye(); // avisa a todos que es una salida voluntaria (no un corte)
     var phone=window.matchMedia&&window.matchMedia("(max-width:480px)").matches;
     if(phone){
       // volver a inicio al instante (sin recarga pesada de Safari)
       $("room").classList.remove("show");
       $("home").style.display="";
       if(location.hash){history.replaceState(null,"",location.pathname+location.search);}
-      setTimeout(function(){location.reload();},60); // recarga en segundo plano para limpiar estado
-    } else {
-      location.hash="";location.reload();
     }
+    if(localStream)localStream.getTracks().forEach(function(t){t.stop();});
+    if(screenStream)screenStream.getTracks().forEach(function(t){t.stop();});
+    if(dawStream)dawStream.getTracks().forEach(function(t){t.stop();});
+    if(meterRAF)cancelAnimationFrame(meterRAF);
+    // un instante para que el aviso de salida llegue antes de cerrar las conexiones
+    setTimeout(function(){
+      Object.keys(peers).forEach(function(k){try{peers[k].call&&peers[k].call.close();peers[k].dc&&peers[k].dc.close();}catch(e){}});
+      Object.keys(pending).forEach(function(k){try{pending[k].dc.close();}catch(e){}});
+      if(peer){try{peer.destroy();}catch(e){}}
+      if(phone){setTimeout(function(){location.reload();},60);} // recarga en segundo plano para limpiar estado
+      else{location.hash="";location.reload();}
+    },150);
   }
 
   // ---------- avatar ----------
@@ -1623,6 +1770,11 @@
     $("copyBtn").addEventListener("click",function(){copyFn("shareLink","copyBtn");});
     $("copyBtn2").addEventListener("click",function(){copyFn("shareLink2","copyBtn2");});
     $("copyBtn3").addEventListener("click",function(){copyFn("shareLink3","copyBtn3");});
+    if($("waitRetryBtn"))$("waitRetryBtn").addEventListener("click",function(){
+      if(hostId)location.hash="#"+hostId+(joinRoomName?"&n="+encodeURIComponent(joinRoomName):"");
+      location.reload();
+    });
+    window.addEventListener("pagehide",sayBye); // cerrar o recargar la pestaña cuenta como salir
 
     $("micCtrl").addEventListener("click",toggleMic);
     $("screenCtrl").addEventListener("click",toggleScreen);
